@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.backends import load_tokenizer, make_backend  # noqa: E402
 from src.config import hf_token_present, load_config  # noqa: E402
 from src.data import load_items  # noqa: E402
+from src.parse import extract_final, hops_well_formed, parse_hops, split_think  # noqa: E402
 from src.prompts import build_ids, user_message  # noqa: E402
 
 
@@ -59,6 +60,16 @@ def main():
     n_tok = sum(g.n_gen_tokens for g in gens)
     print(f"batched x{len(ids)}: {n_tok} tokens in {dt:.1f}s = {n_tok / dt:.1f} tok/s")
     print(f"mean gen tokens {n_tok / len(gens):.0f} | truncated {sum(g.finish_reason == 'length' for g in gens)}/{len(gens)}")
+
+    # format compliance: K well-formed hop lines (after </think> in think mode) + a final answer
+    ok_hops = ok_final = ok_think_hops = 0
+    for it, g in zip(items, gens):
+        think_part, answer_part, _ = split_think(g.text, cfg.think)
+        ok_hops += hops_well_formed(parse_hops(answer_part), it["K"])
+        ok_think_hops += hops_well_formed(parse_hops(think_part), it["K"])
+        ok_final += extract_final(answer_part) is not None
+    print(f"format: K hop lines {ok_hops}/{len(gens)} | final answer {ok_final}/{len(gens)}"
+          + (f" | K hop lines inside <think> {ok_think_hops}/{len(gens)}" if cfg.think else ""))
 
     if torch.cuda.is_available():
         free, total = torch.cuda.mem_get_info()

@@ -29,6 +29,8 @@ multiple samples, Gemma, R1-Distill, Claude API, explicit/silent self-correction
 5. Eligibility (doc §6.1): final answer correct; exactly K hop lines numbered 1..K; each hop i
    matches gold hop i (alias match for last hop, else normalized EM or token-F1 >= 0.8);
    closed-book answer wrong. `debug_relaxed` (CPU configs only) keeps any item with K hop lines.
+   `debug_gold_chain` (CPU configs only; Qwen3-0.6B cannot follow the hop format) substitutes a
+   gold stand-in chain, flagged `chain_source: gold_debug`. Never enable either in a real config.
 6. Validity (doc §6.5), else drop the cell and log the reason in `dropped.jsonl`:
    (1) planted value not equal to / substring of / superstring of any gold answer, alias, or gold
    hop answer (normalized); (2) type tag match; (3) format preserved; (4) not in model's clean chain.

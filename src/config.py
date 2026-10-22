@@ -35,6 +35,9 @@ class EligibilityCfg:
     f1_threshold: float = 0.8
     debug_relaxed: bool = False   # CPU debug only: keep items that have K hop lines
     hop_source: str = "answer"    # "answer" (after </think>) or "think"
+    # CPU debug only: if the model's chain is unusable, build a stand-in chain from the gold
+    # hops so inject/continue/score can be exercised. NEVER set in a real config.
+    debug_gold_chain: bool = False
 
 
 @dataclass

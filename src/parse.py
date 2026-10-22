@@ -47,6 +47,7 @@ def split_think(text: str, think_mode: bool) -> tuple[str, str, bool]:
 
 def _clean_answer(s: str) -> str:
     s = s.strip()
+    s = re.sub(r"</?[A-Za-z_ -]{1,20}>", "", s).strip()   # stray <answer>-style tags
     s = re.sub(r"^\\boxed\{(.*)\}$", r"\1", s)
     s = s.strip("*_` ")
     s = re.sub(r"^(?:the\s+)?answer\s+is\s*:?\s*", "", s, flags=re.IGNORECASE)

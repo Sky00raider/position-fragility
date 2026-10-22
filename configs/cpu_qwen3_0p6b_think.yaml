@@ -10,17 +10,18 @@ decoding:
   temperature: 0.6
   top_p: 0.95
   top_k: 20
-  max_tokens: 1536
-closed_book_max_tokens: 1024
+  max_tokens: 1024        # CPU runs ~4.5 tok/s; this only tests the think code path
+closed_book_max_tokens: 768
 max_model_len: 8192
 batch_size: 4
 seed: 0
 data:
   splits: [dev]
   hops: [3, 4]
-  limit_per_split_hop: 10
+  limit_per_split_hop: 3   # 6 items: CPU think mode is slow
 eligibility:
   f1_threshold: 0.8
   debug_relaxed: true
   hop_source: answer
+  debug_gold_chain: true  # 0.6B cannot follow the hop format; gold stand-in chain, flagged
 bootstrap_reps: 200

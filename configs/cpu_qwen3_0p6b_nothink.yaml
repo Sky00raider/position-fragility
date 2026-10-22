@@ -23,4 +23,5 @@ eligibility:
   f1_threshold: 0.8
   debug_relaxed: true     # 0.6B almost never passes the strict filter
   hop_source: answer
+  debug_gold_chain: true  # 0.6B cannot follow the hop format; gold stand-in chain, flagged
 bootstrap_reps: 200
