@@ -9,6 +9,7 @@
 # bundled into pilot_results_*.tar.gz: send that file back to the team.
 # Safe to re-run after a crash: every step resumes where it stopped.
 set -uo pipefail
+export TQDM_MININTERVAL=30   # progress bars update every 30 s, so the log stays readable
 
 CONFIGS=("$@")
 [ ${#CONFIGS[@]} -eq 0 ] && CONFIGS=(pilot_qwen3_8b_nothink pilot_qwen3_8b_think)
