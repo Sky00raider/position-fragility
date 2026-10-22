@@ -25,6 +25,16 @@ python -c "import vllm, torch, transformers; from vllm import LLM, SamplingParam
 print('vllm', vllm.__version__, '| torch', torch.__version__, '| cuda', torch.version.cuda, '| transformers', transformers.__version__)" \
   || { echo "vLLM not importable: run  pip install vllm==\$(pip show vllm | awk '/^Version/{print \$2}') 'transformers>=5'  and retry"; exit 1; }
 pip check >/dev/null 2>&1 || { echo "WARNING: pip check reports dependency conflicts:"; pip check | head -n 10; }
+
+# model weights go to HF_HOME (default ~/.cache/huggingface): need ~15 GB free (8B AWQ ~6 GB + caches)
+HF_DIR="${HF_HOME:-$HOME/.cache/huggingface}"
+mkdir -p "$HF_DIR"
+FREE_GB=$(df -Pk "$HF_DIR" | awk 'NR==2 {print int($4/1024/1024)}')
+echo "free disk at $HF_DIR: ${FREE_GB} GB"
+if [ "$FREE_GB" -lt 15 ]; then
+  echo "!! less than 15 GB free. Free space (pip cache purge) or set HF_HOME to a bigger drive, then rerun."
+  exit 1
+fi
 git rev-parse --short HEAD
 
 if [ ! -f data/items/musique_dev_34hop.jsonl ] || [ ! -f data/items/musique_train_34hop.jsonl ]; then
