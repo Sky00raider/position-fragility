@@ -19,9 +19,12 @@ copy .env.example .env      # then put your HF token in .env
 ```
 Below, `python` means `.venv\Scripts\python` (or activate the venv first).
 
+Step-by-step checklist for the GPU owner: **`docs/GPU_SETUP.md`**.
+
 ### GPU box, native Linux (RTX 5070 needs CUDA 12.8+ builds)
+Ubuntu 24.04 (Python 3.12) recommended.
 ```bash
-python3.11 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements-gpu.txt     # vLLM first: it pins a matching CUDA torch
 pip install -r requirements.txt
@@ -37,11 +40,11 @@ does not support sm_120, install the CUDA 12.8 wheel from the vLLM install docs
 ### GPU box, Windows via WSL2 (vLLM does not run on native Windows)
 1. On Windows: install the latest NVIDIA Game Ready/Studio driver (it provides CUDA inside WSL;
    do **not** install a Linux NVIDIA driver inside WSL).
-2. PowerShell (admin): `wsl --install -d Ubuntu-22.04`, reboot, open Ubuntu.
+2. PowerShell (admin): `wsl --install -d Ubuntu-24.04`, reboot, open Ubuntu.
 3. In Ubuntu: `nvidia-smi` must show the 5070. Then:
    ```bash
-   sudo apt update && sudo apt install -y python3.11 python3.11-venv git
-   git clone <repo url> && cd position-fragility
+   sudo apt update && sudo apt install -y python3-venv python3-pip git gh
+   gh auth login && git clone https://github.com/Sky00raider/position-fragility.git && cd position-fragility
    ```
    and follow the native Linux steps above.
 4. Keep the repo inside the Linux filesystem (`~/`), not `/mnt/c/` (much faster model loading).
