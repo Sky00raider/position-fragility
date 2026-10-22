@@ -34,6 +34,11 @@ class Backend:
 
 class VLLMBackend(Backend):
     def __init__(self, cfg: Config):
+        import os
+        # FlashInfer's sampler JIT-compiles with nvcc, which a driver-only machine (no CUDA toolkit)
+        # does not have. Use vLLM's PyTorch sampler instead: same sampling, nothing to compile.
+        # Must be set before vllm is imported; set VLLM_USE_FLASHINFER_SAMPLER=1 to override.
+        os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
         from vllm import LLM
         self.cfg = cfg
         self.llm = LLM(

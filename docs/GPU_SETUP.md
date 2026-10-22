@@ -57,6 +57,11 @@ built for Blackwell: send the error, we'll install the CUDA 12.8 build.
 hangs after a "Not enough free disk space" warning: `pip cache purge` (frees several GB), or put
 `export HF_HOME=/bigger/drive/hf_cache` in `~/.bashrc`, then rerun.
 
+If vLLM fails during warm-up with `Could not find nvcc and default cuda_home='/usr/local/cuda'
+doesn't exist` (FlashInfer wants to compile kernels, but only the driver is installed): `git pull`
+(the code now uses vLLM's PyTorch sampler) and run `vllm download-kernels`. Installing the full
+CUDA toolkit is not needed.
+
 If vLLM fails with `cannot import name 'PreTrainedConfig' from 'transformers'`, transformers got
 downgraded below what vLLM needs (fixed in requirements.txt on Oct 22). Repair with:
 ```bash
