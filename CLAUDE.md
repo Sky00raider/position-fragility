@@ -39,6 +39,8 @@ multiple samples, Gemma, R1-Distill, Claude API, explicit/silent self-correction
 8. `correct` = SQuAD-normalized EM vs answer + aliases. `adopted` = final answer == planted value
    (NOT "planted value appears somewhere"). Final answer = last `Final answer:` after `</think>`;
    none -> `pred=None` (counts as wrong). Truncated runs count as wrong; report truncation rates.
+   Secondary only: `correct_contains` / `adopted_contains` = gold / planted value contained in the
+   final-answer line (and the other one not), for verbose answers. Never in the whole continuation.
 9. Recovery RR = P(inject correct | clean twin at same k correct). PSI = RR_late - RR_early on
    intermediate hops only. **Terminal hop never pooled with "late".**
 10. `remaining` = number of later hops depending on hop k (transitively), from `#N` refs.
@@ -64,7 +66,8 @@ scripts/sanity.py gpu_smoke.py   tests/
  "correct":null, "adopted":null, "explicit_sc":null, "doubt_marker":null,
  "item_difficulty":null, "sample_idx":0, "n_gen_tokens":0, "truncated":false,
  "composition":"3hop1", "is_linear":true, "remaining_linear":0, "eligibility_relaxed":false,
- "seed":0, "model_revision":null, "backend":"vllm|hf", "lib_version":"", "f1":0.0}
+ "seed":0, "model_revision":null, "backend":"vllm|hf", "lib_version":"", "f1":0.0,
+ "correct_contains":null, "adopted_contains":null, "clean_twin_correct":null, "chain_source":"model"}
 ```
 `rel_pos = k/K`; `remaining_linear = K-k`; `item_difficulty` = 1 - noprefix correct (binary,
 one sample). `noprefix` rows have k=0. `explicit_sc` / `doubt_marker` stay null (out of scope).

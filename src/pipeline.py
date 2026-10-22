@@ -301,10 +301,17 @@ def cmd_score(args):
         _, answer_part, _ = split_think(full_output(r, cfg.think), cfg.think)
         pred = extract_final(answer_part)
         golds = [r["gold"], *r["gold_aliases"]]
+        npred = normalize(pred)
+        gold_in = any(normalize(g) and normalize(g) in npred for g in golds)
+        new_in = bool(r["new_value"]) and normalize(r["new_value"]) in npred
         scored.append({**meta, **{k: v for k, v in r.items() if k != "text"},
                        "continuation": r["text"], "pred": pred,
+                       # primary (doc §8.1): exact match of the extracted final answer
                        "correct": exact_match(pred, golds), "f1": max_f1(pred, golds),
-                       "adopted": (normalize(pred) == normalize(r["new_value"])) if r["new_value"] else None})
+                       "adopted": (npred == normalize(r["new_value"])) if r["new_value"] else None,
+                       # secondary: containment within the final-answer line only (verbose answers)
+                       "correct_contains": gold_in and not new_in,
+                       "adopted_contains": (new_in and not gold_in) if r["new_value"] else None})
     # item difficulty from the noprefix run; clean-twin outcome attached to every cell at the same k
     noprefix = {s["item_id"]: s["correct"] for s in scored if s["condition"] == "noprefix"}
     clean = {(s["item_id"], s["k"]): s["correct"] for s in scored if s["condition"] == "clean"}
