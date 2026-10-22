@@ -346,6 +346,10 @@ def cmd_estimate(args):
     n_elig_items = max(1, len({c["item_id"] for c in cells}))
     cells_per_item = len(cells) / n_elig_items if cells else 1 + 3 * 3.5   # 1 + K + 2K, mean K~3.5
     tokens = args.n_items * 2 * base_tok + args.n_items * elig_rate * cells_per_item * cont_tok
+    if args.tok_per_s is None:   # measured batched throughput of this run
+        timing = read_jsonl(cfg.run_dir / "timing.jsonl")
+        args.tok_per_s = sum(t["n_tokens"] for t in timing) / sum(t["seconds"] for t in timing)
+        print(f"using measured throughput {args.tok_per_s:.0f} tok/s (pilot batches are smaller than main-run batches, so this is pessimistic)")
     hours = tokens / args.tok_per_s / 3600
     print(f"{cfg.run_name}: mean tokens baseline {base_tok:.0f}, continuation {cont_tok:.0f}{'' if cont else ' (assumed = baseline)'}")
     print(f"eligible rate {elig_rate:.2f}, cells/eligible item {cells_per_item:.1f}")
@@ -378,7 +382,8 @@ def main(argv=None):
         p = sub.add_parser(name, help=help_)
         p.add_argument("--config", required=True)
         if name == "estimate":
-            p.add_argument("--tok-per-s", type=float, required=True, help="batched throughput on the GPU")
+            p.add_argument("--tok-per-s", type=float, default=None,
+                           help="batched throughput; default = measured in this run's timing.jsonl")
             p.add_argument("--n-items", type=int, required=True, help="items to run baseline on")
             p.add_argument("--elig-rate", type=float, default=None, help="override measured eligible rate")
         p.set_defaults(fn=fn)

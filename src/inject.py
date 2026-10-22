@@ -3,7 +3,8 @@
 in_context : same type tag, from the item's 4 shown distractor paragraphs
              (titles first, then NER/regex strings; closest length wins).
 off_context: same type tag, a gold hop answer of another item that appears nowhere
-             in this item's question or shown paragraphs (closest length wins).
+             in this item's question or shown paragraphs; answers to the same Wikidata
+             relation ("X >> country") first, then closest length.
 """
 from __future__ import annotations
 
@@ -59,10 +60,24 @@ def check_validity(item: dict, orig_value: str, new_value: str, gold_tag: str,
     return None
 
 
-def _ranked(cands: list[dict], orig: str, prefer_titles: bool, salt: str) -> list[dict]:
-    """Sort candidates: titles first (in_context), then length bucket (|diff|//3), then a
-    seeded tiebreak per item x hop, so ties don't always pick the same value."""
+def relation(subquestion: str) -> str | None:
+    """What a hop asks for, used to prefer off_context values that answer the same kind of question.
+
+    Wikidata-style hops: "Yaxing Coach >> headquarters location" -> "rel:headquarters location".
+    Natural-language hops: first two words, "What city did ..." -> "q:what city".
+    """
+    if ">>" in subquestion:
+        r = subquestion.split(">>", 1)[1].strip().lower()
+        return f"rel:{r}" if r else None
+    words = re.findall(r"[a-z]+", subquestion.lower())
+    return f"q:{' '.join(words[:2])}" if len(words) >= 2 else None
+
+
+def _ranked(cands: list[dict], orig: str, prefer_titles: bool, salt: str, rel: str | None = None) -> list[dict]:
+    """Sort candidates: same relation first (off_context), titles first (in_context), then
+    length bucket (|diff|//3), then a seeded tiebreak per item x hop so ties vary."""
     return sorted(cands, key=lambda c: (
+        0 if (rel is not None and c.get("relation") == rel) else 1,
         0 if (prefer_titles and c.get("source") == "title") else 1,
         abs(len(c["text"]) - len(orig)) // 3,
         cell_seed(salt, c["text"])))
@@ -85,7 +100,8 @@ def pick_value(item: dict, k: int, orig_value: str, error_type: str, clean_chain
             p["title"] + " " + p["paragraph_text"] for p in item["context"]))
         pool = [c for c in off_pool if c["tag"] == tag and c["item_id"] != item["id"]
                 and normalize(c["text"]) and normalize(c["text"]) not in context]
-        ranked = _ranked(pool, orig_value, prefer_titles=False, salt=salt)
+        ranked = _ranked(pool, orig_value, prefer_titles=False, salt=salt,
+                         rel=relation(item["hops"][k - 1].get("question", "")))
     if not ranked:
         return None, f"no_candidate_with_tag_{tag}", 0
     first_reason = None
@@ -108,5 +124,6 @@ def build_off_pool(items: list[dict]) -> list[dict]:
             key = (h["answer"].lower(), h["tag"])
             if key not in seen:
                 seen.add(key)
-                pool.append({"text": h["answer"], "tag": h["tag"], "item_id": it["id"]})
+                pool.append({"text": h["answer"], "tag": h["tag"], "item_id": it["id"],
+                             "relation": relation(h.get("question", ""))})
     return pool

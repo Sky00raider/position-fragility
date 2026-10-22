@@ -1,7 +1,7 @@
 run_name: qwen3_8b_nothink
 backend: vllm
 model_id: Qwen/Qwen3-8B-AWQ
-revision: null            # pin a commit hash before the main run
+revision: 4da05a8edb55c6046cce958586c33b61da07bb79   # pinned 2026-10-22
 quant: awq4
 gpu: "5070"
 mode: nothink

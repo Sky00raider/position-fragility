@@ -70,9 +70,23 @@ class Config:
         return REPO_ROOT / "runs" / self.run_name
 
 
+def _merge(base: dict, over: dict) -> dict:
+    out = dict(base)
+    for k, v in over.items():
+        out[k] = _merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
+
+
+def _read_yaml(path: Path) -> dict:
+    """A config may say `extends: other.yaml` and override only some keys (used by pilot configs)."""
+    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    parent = raw.pop("extends", None)
+    return _merge(_read_yaml(path.parent / parent), raw) if parent else raw
+
+
 def load_config(path: str | Path) -> Config:
     load_dotenv(REPO_ROOT / ".env")  # sets HF_TOKEN in os.environ if present
-    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    raw = _read_yaml(Path(path))
     cfg = Config(
         **{k: v for k, v in raw.items() if k not in ("decoding", "data", "eligibility")},
         decoding=Decoding(**raw.get("decoding", {})),

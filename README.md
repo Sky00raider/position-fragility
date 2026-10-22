@@ -46,14 +46,17 @@ does not support sm_120, install the CUDA 12.8 wheel from the vLLM install docs
    and follow the native Linux steps above.
 4. Keep the repo inside the Linux filesystem (`~/`), not `/mnt/c/` (much faster model loading).
 
-### First thing on the GPU box: smoke test
+### First thing on the GPU box: the pilot (one command)
 ```bash
-python -m src.pipeline prepare-data --splits dev
-python scripts/gpu_smoke.py --config configs/qwen3_8b_nothink.yaml
-python scripts/gpu_smoke.py --config configs/qwen3_8b_think.yaml
+source .venv/bin/activate
+bash scripts/run_pilot.sh                              # Qwen3-8B nothink + think, 50 dev items each
+bash scripts/run_pilot.sh pilot_llama31_8b_nothink     # optional, e.g. on the 3070
 ```
-Send the printed tokens/s, truncation count and VRAM to the team.
-Note: vLLM pre-allocates `gpu_memory_utilization` of VRAM, so "VRAM used" will be ~90%.
+It runs the GPU smoke test, then the full pipeline on 50 dev items per config (pilot configs
+`configs/pilot_*.yaml` inherit every setting from the main config), the analysis and a GPU-hours
+estimate, and writes `pilot_results_<host>_<time>.tar.gz`. **Send that file to the team.**
+It is safe to re-run after a crash. vLLM pre-allocates `gpu_memory_utilization` of VRAM, so
+"VRAM used" will read ~90%. No HF token is needed: both AWQ model repos are public.
 
 ## 2. Data
 ```bash
