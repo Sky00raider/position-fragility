@@ -1,0 +1,25 @@
+run_name: qwen3_8b_think
+backend: vllm
+model_id: Qwen/Qwen3-8B-AWQ
+revision: null            # pin a commit hash before the main run
+quant: awq4
+gpu: "5070"
+mode: think
+decoding:                 # Qwen3 recommended thinking settings
+  temperature: 0.6
+  top_p: 0.95
+  top_k: 20
+  max_tokens: 4096        # raise to 6144 if baseline truncation on the GPU pilot > 5%
+closed_book_max_tokens: 4096
+max_model_len: 8192
+gpu_memory_utilization: 0.90
+batch_size: 128
+seed: 0
+data:
+  splits: [dev, train]
+  hops: [3, 4]
+  limit_per_split_hop: null
+eligibility:
+  f1_threshold: 0.8
+  debug_relaxed: false
+  hop_source: answer      # switch to "think" if stage-2 report says hops live in the think block

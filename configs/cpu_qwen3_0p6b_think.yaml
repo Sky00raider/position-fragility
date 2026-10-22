@@ -1,0 +1,26 @@
+# CPU debug config: tests the pipeline only. Results are meaningless.
+run_name: cpu_qwen3_0p6b_think
+backend: hf
+device: cpu
+model_id: Qwen/Qwen3-0.6B
+quant: none
+gpu: none
+mode: think
+decoding:
+  temperature: 0.6
+  top_p: 0.95
+  top_k: 20
+  max_tokens: 1536
+closed_book_max_tokens: 1024
+max_model_len: 8192
+batch_size: 4
+seed: 0
+data:
+  splits: [dev]
+  hops: [3, 4]
+  limit_per_split_hop: 10
+eligibility:
+  f1_threshold: 0.8
+  debug_relaxed: true
+  hop_source: answer
+bootstrap_reps: 200

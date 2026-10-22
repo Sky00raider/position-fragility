@@ -1,0 +1,26 @@
+run_name: llama31_8b_nothink
+backend: vllm
+model_id: hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+tokenizer_id: hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+revision: null
+quant: awq4
+gpu: "3070"
+mode: nothink
+decoding:                 # Meta default sampling
+  temperature: 0.6
+  top_p: 0.9
+  top_k: 0                # 0 = disabled
+  max_tokens: 1024
+closed_book_max_tokens: 512
+max_model_len: 8192
+gpu_memory_utilization: 0.90
+batch_size: 128
+seed: 0
+data:
+  splits: [dev, train]
+  hops: [3, 4]
+  limit_per_split_hop: null
+eligibility:
+  f1_threshold: 0.8
+  debug_relaxed: false
+  hop_source: answer

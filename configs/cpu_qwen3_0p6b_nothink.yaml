@@ -1,0 +1,26 @@
+# CPU debug config: tests the pipeline only. Results are meaningless.
+run_name: cpu_qwen3_0p6b_nothink
+backend: hf
+device: cpu
+model_id: Qwen/Qwen3-0.6B
+quant: none
+gpu: none
+mode: nothink
+decoding:
+  temperature: 0.7
+  top_p: 0.8
+  top_k: 20
+  max_tokens: 384
+closed_book_max_tokens: 256
+max_model_len: 8192
+batch_size: 4
+seed: 0
+data:
+  splits: [dev]
+  hops: [3, 4]
+  limit_per_split_hop: 10
+eligibility:
+  f1_threshold: 0.8
+  debug_relaxed: true     # 0.6B almost never passes the strict filter
+  hop_source: answer
+bootstrap_reps: 200
