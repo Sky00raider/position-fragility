@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 
 from . import data
 
@@ -20,6 +21,7 @@ def cmd_prepare_data(args):
 
 
 def main(argv=None):
+    sys.stdout.reconfigure(encoding="utf-8")   # Windows consoles default to cp1252
     ap = argparse.ArgumentParser(prog="python -m src.pipeline")
     sub = ap.add_subparsers(dest="cmd", required=True)
 

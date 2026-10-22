@@ -23,6 +23,7 @@ from .store import read_jsonl, write_jsonl
 RAW_DIR = REPO_ROOT / "data" / "raw" / "musique"
 ITEMS_DIR = REPO_ROOT / "data" / "items"
 GDRIVE_ID = "1tGdADlNjWFaHLeZZGShh2IRcpO6Lv24h"   # official StonyBrookNLP/musique download_data.sh
+HF_MIRROR = "dgslibisey/MuSiQue"                    # fallback: same musique_ans_v1.0_*.jsonl files
 SEED = 13
 N_DISTRACTORS = 4
 
@@ -32,20 +33,36 @@ def raw_path(split: str) -> Path:
     return RAW_DIR / f"musique_ans_v1.0_{split}.jsonl"
 
 
-def download() -> None:
-    if raw_path("train").exists() and raw_path("dev").exists():
-        print("MuSiQue already downloaded")
-        return
+def _download_gdrive() -> None:
     import gdown
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
     zip_path = RAW_DIR / "musique_v1.0.zip"
     if not zip_path.exists():
-        gdown.download(id=GDRIVE_ID, output=str(zip_path), quiet=False)
+        if gdown.download(id=GDRIVE_ID, output=str(zip_path), quiet=False) is None:
+            raise RuntimeError("gdown failed")
     with zipfile.ZipFile(zip_path) as z:
         for name in z.namelist():
             base = Path(name).name
             if base.startswith("musique_ans_v1.0_") and base.endswith(".jsonl"):
                 (RAW_DIR / base).write_bytes(z.read(name))
+
+
+def _download_hf() -> None:
+    from huggingface_hub import hf_hub_download
+    for split in ("train", "dev"):
+        hf_hub_download(HF_MIRROR, raw_path(split).name, repo_type="dataset", local_dir=RAW_DIR)
+
+
+def download() -> None:
+    """Official Google Drive zip first; HF mirror with the same files if Drive refuses (quota)."""
+    if raw_path("train").exists() and raw_path("dev").exists():
+        print("MuSiQue already downloaded")
+        return
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        _download_gdrive()
+    except Exception as e:
+        print(f"Google Drive download failed ({type(e).__name__}); using HF mirror {HF_MIRROR}")
+        _download_hf()
     for split in ("train", "dev"):
         if not raw_path(split).exists():
             raise FileNotFoundError(f"{raw_path(split)} missing after unzip")
@@ -153,15 +170,36 @@ def build_context(raw: dict) -> tuple[list[dict], list[dict]]:
     return ctx, distractors
 
 
+def standalone_tags(texts: list[str], nlp) -> list[str]:
+    """Type tag of each string on its own (no context), batched.
+
+    Only an entity covering the whole string counts ("Treaty of Paris" is not GPE
+    just because it contains "Paris"); a leading "the" is ignored.
+    """
+    out = []
+    for t, doc in zip(texts, nlp.pipe(texts, batch_size=256)):
+        s = surface_tag(t)
+        if s is None:
+            core = re.sub(r"^the\s+", "", t.strip(), flags=re.IGNORECASE).lower()
+            whole = [e for e in doc.ents if re.sub(r"^the\s+", "", e.text, flags=re.IGNORECASE).lower() == core]
+            s = whole[0].label_ if whole else "OTHER"
+        out.append(s)
+    return out
+
+
 def distractor_candidates(distractors: list[dict], nlp) -> list[dict]:
-    """Typed strings from the shown distractor paragraphs: titles, NER entities, years."""
-    out, seen = [], set()
+    """Typed strings from the shown distractor paragraphs: titles, NER entities, years.
+
+    A candidate is kept only if its in-context NER label agrees with the label of the
+    string on its own (cheap guard against spaCy-sm mistags such as "Peter" = GPE).
+    """
+    raw, seen = [], set()
 
     def add(text, tag, source):
         text = text.strip()
         if text and text.lower() not in seen:
             seen.add(text.lower())
-            out.append({"text": text, "tag": tag, "source": source})
+            raw.append({"text": text, "tag": tag, "source": source})
 
     for p in distractors:
         doc = nlp(p["paragraph_text"])
@@ -170,7 +208,8 @@ def distractor_candidates(distractors: list[dict], nlp) -> list[dict]:
             add(ent.text, surface_tag(ent.text) or ent.label_, "ner")
         for y in YEAR_IN_TEXT.findall(p["paragraph_text"]):
             add(y, "YEAR", "regex")
-    return out
+    alone = standalone_tags([c["text"] for c in raw], nlp)
+    return [c for c, a in zip(raw, alone) if a == c["tag"]]
 
 
 def prepare_item(raw: dict, split: str, nlp) -> dict:
@@ -178,11 +217,13 @@ def prepare_item(raw: dict, split: str, nlp) -> dict:
     deps, remaining, linear = hop_structure(decomp)
     paras = raw["paragraphs"]
     hops = []
+    alone = standalone_tags([d["answer"] for d in decomp], nlp)
     for i, d in enumerate(decomp):
         support = paras[d["paragraph_support_idx"]]["paragraph_text"] if d.get("paragraph_support_idx") is not None else ""
+        tag = type_tag(d["answer"], nlp(support) if support else None, nlp)
         hops.append({
-            "question": d["question"], "answer": d["answer"],
-            "tag": type_tag(d["answer"], nlp(support) if support else None, nlp),
+            "question": d["question"], "answer": d["answer"], "tag": tag,
+            "tag_confident": tag == alone[i],   # only confident answers enter the off_context pool
             "depends_on": deps[i], "remaining_dep": remaining[i],
         })
     ctx, distractors = build_context(raw)

@@ -3,6 +3,8 @@
 
 # data and outputs
 data/raw/
+# 50+ MB, regenerated deterministically by `prepare-data`
+data/items/*.jsonl
 runs/
 
 # python

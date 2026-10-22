@@ -22,6 +22,7 @@ from src.prompts import build_ids, user_message  # noqa: E402
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--n", type=int, default=10)
