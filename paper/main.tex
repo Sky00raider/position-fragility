@@ -1,0 +1,188 @@
+% Compile on Overleaf (IEEEtran is built in). Upload main.tex + refs.bib, set compiler to pdfLaTeX.
+% Sections 4 (Method) and 5 (Experimental Setup) are drafted from the code at the commit noted in
+% \codecommit. Everything marked \tbd{...} is filled in after the GPU runs. \todo{...} = open decision.
+\documentclass[conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{cite}
+
+\newcommand{\tbd}[1]{\textcolor{red}{[TBD: #1]}}
+\newcommand{\todo}[1]{\textcolor{orange}{[TODO: #1]}}
+\newcommand{\codecommit}{\texttt{\tbd{commit}}}
+\newcommand{\RR}{\mathrm{RR}}
+\newcommand{\PSI}{\mathrm{PSI}}
+
+\begin{document}
+
+\title{Where Does a Wrong Step Hurt? Error Position, Remaining Steps, and Thinking Mode in Multi-Hop Reasoning}
+
+\author{\IEEEauthorblockN{\tbd{Authors}}
+\IEEEauthorblockA{Dept. of CSE (AI\&ML), M.S. Ramaiah Institute of Technology, Bengaluru, India}}
+
+\maketitle
+
+\begin{abstract}
+\tbd{abstract, after results}
+\end{abstract}
+
+\begin{IEEEkeywords}
+chain-of-thought, error propagation, multi-hop question answering, reasoning models, robustness
+\end{IEEEkeywords}
+
+% ======================================================================
+\section{Introduction}
+\todo{three-way disagreement (ASCoT late~\cite{ascot}, von Recum early~\cite{vonrecum}, Jia \& Mu early but confounded~\cite{jiamu}); why position matters for where to verify in agent pipelines; contributions: (i) first position-controlled injection study on multi-hop QA, (ii) design separating position, remaining steps and the terminal step, (iii) same-weights thinking toggle, (iv) released harness.}
+
+% ======================================================================
+\section{Related Work}
+\todo{doc \S12 outline: multi-hop QA and shortcuts; CoT and thinking modes; errors and self-correction; interventions on CoT; position of errors; position effects in the input.}
+
+% ======================================================================
+\section{Research Questions}
+\todo{RQ1--RQ5 and hypotheses H1--H5 from the design doc \S1; equivalence margin $\pm$5 pp.}
+
+% ======================================================================
+\section{Method}
+\label{sec:method}
+
+\subsection{Task and data}
+We use MuSiQue-Ans v1.0~\cite{musique}, whose questions are composed from single-hop questions, each with a gold intermediate answer and a supporting paragraph. We keep answerable questions with $K\in\{3,4\}$ hops from the train and dev splits (dev: 760 three-hop and 405 four-hop; train: 4{,}387 and 1{,}175). Two-hop questions are excluded because they have only one intermediate hop. Because the method is inference-only, train items are usable; we report the split of every item and compare results across splits.
+
+MuSiQue composes hops in five shapes. In the \emph{linear} shapes (3hop1, 4hop1) every hop consumes the previous answer. In the \emph{branching} shapes (3hop2, 4hop2, 4hop3) some hops are independent and are merged later. We read each hop's dependencies from the \texttt{\#N} references in the gold decomposition. Linear chains are our primary analysis set; all items form a robustness check.
+
+\textbf{Context.} Each item is shown its gold supporting paragraphs plus four fixed non-supporting paragraphs (distinct titles, none sharing a title with a gold paragraph), sampled with a per-item seed and shuffled with the same seed, so every model and condition sees the identical context.
+
+\subsection{Prompt and own-chain baseline}
+All models receive the same instruction (Fig.~\ref{fig:prompt}), asking for one line per hop, \texttt{Hop N: <sub-question> -> <answer>}, followed by \texttt{Final answer: <short answer>}. Prompts are built with each model's own chat template. For each item we generate the model's \emph{own} chain (one sample) and a \emph{closed-book} answer (same instruction without paragraphs).
+
+\begin{figure}[t]
+\small
+\begin{verbatim}
+Answer the question using only the paragraphs
+below. Reason one hop at a time.
+Write each hop on its own line as
+"Hop N: <sub-question> -> <answer>".
+After the last hop, write
+"Final answer: <short answer>".
+
+Paragraphs:
+Title: <title>
+<paragraph text>
+...
+Question: <question>
+\end{verbatim}
+\caption{Prompt used for all models and modes. The closed-book variant drops ``using only the paragraphs below'' and the paragraphs.}
+\label{fig:prompt}
+\end{figure}
+
+\textbf{Eligibility.} An item enters the injection study only if its own chain (i)~gives a correct final answer (exact match after SQuAD normalization~\cite{squad} against the answer and its aliases), (ii)~contains exactly $K$ hop lines numbered $1..K$, (iii)~matches the gold decomposition hop by hop, in order (each hop answer has normalized exact match or token-F1 $\ge 0.8$ with the gold hop answer; the final hop is also checked against the answer aliases), (iv)~is not truncated, and (v)~the closed-book answer is wrong, which removes items the model can answer from memory. Every failed criterion is logged per item. Requirement (iii) guarantees that the hop we corrupt is the hop the gold decomposition says it is, which is what makes the error position exact.
+
+\subsection{Conditions}
+For an eligible item with $K$ hops we run:
+\begin{itemize}
+\item \textbf{noprefix}: the original prompt, a fresh sample; it defines item difficulty.
+\item \textbf{clean$_k$}, $k=1..K$: the model's own chain truncated after hop line $k$, then resumed.
+\item \textbf{inject$_k$}, $k=1..K$, for each of two error types: as clean$_k$, but the answer on hop line $k$ is replaced by a planted value.
+\end{itemize}
+This gives $1+3K$ cells per item (10 for $K{=}3$, 13 for $K{=}4$) before validity drops. Hop $K$ produces the final answer; corrupting it is analyzed separately as the \emph{terminal} step and is never pooled with ``late'' intermediate hops.
+
+\subsection{Injection by assistant-turn prefill}
+Corruptions are applied to the model's own text, not to a gold template. The prefix is the model's own answer text cut at the end of hop line $k$, with only the answer span after the arrow on that line replaced; it ends in exactly one newline. The prefix is appended after the chat template's assistant header, so the model continues its own turn: no new user turn is opened and no end-of-turn token is placed at the splice. For Qwen3 in non-thinking mode the template's empty think block precedes the prefix; in thinking mode the prefix is placed inside the think block (\texttt{<think>\textbackslash n} + hop lines), and the model continues reasoning before it answers. \todo{confirm from the pilot that Qwen3-8B keeps the hop format inside thinking; otherwise switch to parsing hops from the think block or to paragraph-level injection as in~\cite{vonrecum}.}
+
+Prompt text is tokenized once, without adding special tokens, and the identical token ids are passed to the inference engine. Unit tests check, for every tokenizer used, that the spliced ids contain no end-of-turn token after the template, that the template tokens are unchanged by the splice, and that Llama receives exactly one BOS token.
+
+\subsection{Error types}
+Every hop answer receives a type tag: regular expressions for years, five date formats and plain numbers; otherwise the spaCy (\texttt{en\_core\_web\_sm})~\cite{spacy} entity label of the answer's mention in its supporting paragraph. Candidate values are kept only when their in-context label agrees with the label of the string on its own (covering the whole string), which removes many small-model mistags.
+\begin{itemize}
+\item \textbf{In-context distractor}: a string of the same type from the item's four \emph{shown} distractor paragraphs (titles preferred, then named entities and years). It looks supported by the context.
+\item \textbf{Off-context swap}: a gold hop answer of the same type from a \emph{different} MuSiQue item that occurs nowhere in this item's question or shown paragraphs, preferring answers to the same relation (e.g., \emph{place of birth}). It is supported by nothing in the context.
+\end{itemize}
+Within these pools candidates are ranked by length similarity to the original answer, with a seeded tie-break per item and hop.
+
+\subsection{Validity rules}
+A planted value is used only if all hold, otherwise the next candidate is tried; cells with no valid candidate are dropped and logged with the failing rule:
+(1)~after normalization it is not equal to, a substring of, or a superstring of any gold answer, alias, or gold hop answer of the item;
+(2)~its type tag equals the original's;
+(3)~its format matches (year vs.\ year, digits vs.\ none, casing style, trailing punctuation);
+(4)~it does not already occur in the model's own baseline output.
+Two authors independently audited 100 planted values (25 per error type and $K$) for type match and plausibility: \tbd{agreement, Cohen's $\kappa$, \% type-correct and plausible per error type}.
+
+\subsection{Outcomes}
+The final answer is the text after the last \texttt{Final answer:} in the answer part of the output (after \texttt{</think>} in thinking mode); a missing final answer or a truncated run counts as wrong.
+\textbf{Correct} (primary) is exact match against the answer and aliases. \textbf{Adopted} is exact match against the planted value; we deliberately do not count mere mentions of the planted value, which fire on restatement. As a secondary measure for verbose answers we also report containment of the gold (resp.\ planted) value within the final-answer line only.
+
+\textbf{Recovery with clean-twin conditioning.} Resumption itself can fail, so we measure recovery only where the uncorrupted resume succeeds:
+\begin{equation}
+\RR(k) = P\left(\text{inject}_k \text{ correct} \mid \text{clean}_k \text{ correct}\right).
+\end{equation}
+\textbf{Position sensitivity} on intermediate hops is
+\begin{equation}
+\PSI = \RR_{\text{late}} - \RR_{\text{early}},
+\end{equation}
+with early $k{=}1$ and late $k{=}K{-}1$ ($k{=}2$ for $K{=}3$, $k{=}3$ for $K{=}4$). $\PSI>0$ means early errors propagate more.
+
+\textbf{Remaining steps.} For hop $k$, \emph{remaining} is the number of later hops that depend on it directly or transitively; on linear chains this equals $K-k$. Relative position is $k/K$. Because $k$ + remaining $=K$ on linear chains, position, remaining steps and chain length cannot all be varied independently. We therefore compare \emph{matched-remaining} cells, (K3,k2) vs.\ (K4,k3) with one step left and (K3,k1) vs.\ (K4,k2) with two, where absolute position differs but remaining steps are equal (the pairs also differ by one hop in $K$), and we include item difficulty as a covariate.
+
+% ======================================================================
+\section{Experimental Setup}
+\label{sec:setup}
+
+\subsection{Models and inference}
+\textbf{Qwen3-8B}~\cite{qwen3}, 4-bit AWQ~\cite{awq} (\texttt{Qwen/Qwen3-8B-AWQ}, revision \texttt{4da05a8}), run with \texttt{enable\_thinking} off and on. Same weights in both modes, so the comparison isolates the thinking mode.
+\textbf{Llama-3.1-8B-Instruct}~\cite{llama3}, 4-bit AWQ (\texttt{hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4}, revision \texttt{db1f81a}), non-thinking only. \tbd{drop if not run.}
+Inference uses vLLM~\cite{vllm} \tbd{version} on an RTX 5070 (12\,GB) \tbd{and RTX 3070 (8\,GB) for Llama}, with an 8{,}192-token context. Each model--mode pair runs on one GPU for all of its conditions.
+
+\begin{table}[t]
+\centering
+\caption{Decoding settings (one sample per cell).}
+\label{tab:decoding}
+\begin{tabular}{lcccc}
+\toprule
+ & $T$ & top-$p$ & top-$k$ & max new tokens \\
+\midrule
+Qwen3-8B, non-thinking & 0.7 & 0.8 & 20 & 1024 \\
+Qwen3-8B, thinking & 0.6 & 0.95 & 20 & 4096 \\
+Llama-3.1-8B-Instruct & 0.6 & 0.9 & -- & 1024 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Decoding} (Table~\ref{tab:decoding}) follows each model's recommended sampling settings and is identical across all conditions within a model--mode pair. Closed-book runs cap generation at 512 tokens in non-thinking mode. Each cell draws one sample with its own seed, derived from a SHA-256 hash of (run, item, condition, hop, error type), so results do not depend on batching and interrupted runs resume reproducibly. Llama's chat template adds a fixed system header (``Today Date: 26 Jul 2024''), identical for all prompts. \tbd{thinking-mode token cap: 4096 kept, or raised to 6144 if pilot truncation $>5\%$; report truncation rate.}
+
+\subsection{Item counts}
+\tbd{Items attempted per split and $K$; eligible items per model--mode (overall, linear); cells run; cells dropped by validity rule. Target from the power analysis: 300--400 eligible items per $K$ per model.}
+
+\subsection{Statistical analysis}
+All confidence intervals are item-clustered percentile bootstraps (items resampled with replacement, 2{,}000 replicates). We report:
+\begin{itemize}
+\item $\RR$ per model $\times$ mode $\times K \times k \times$ error type, terminal hop in separate rows;
+\item $\PSI$ per model $\times$ mode $\times$ error type $\times K$ with 95\% CIs; a position effect is declared \emph{absent} if the 90\% CI lies within $\pm5$ percentage points (equivalent to two one-sided tests at $\alpha=0.05$);
+\item exact McNemar tests on paired early vs.\ late outcomes of the same item (both clean twins correct), per model $\times$ mode $\times$ error type $\times K$, Holm-adjusted across these tests;
+\item matched-remaining contrasts on linear chains (items resampled independently within each $K$);
+\item terminal vs.\ pooled intermediate recovery;
+\item one logistic regression on intermediate inject cells with a correct clean twin,
+\[
+\text{correct} \sim \text{rel\_pos}\times\text{mode} + \text{remaining} + K + \text{error\_type} + \text{difficulty} \,(+\, \text{model}),
+\]
+with standard errors clustered by item and variance inflation factors reported, since rel\_pos, remaining and $K$ are partly collinear by construction.
+\end{itemize}
+Primary results use linear chains; all-item results and results excluding truncated runs are reported as robustness checks, since a truncated run counts as wrong and truncation could differ by position. Before the main runs we ran a pilot of 50 dev items per mode and required clean-twin accuracy of about 90\% (lower would mean resumption itself is broken) \tbd{pilot outcome}.
+
+% ======================================================================
+\section{Results}
+\todo{RQ1 position; RQ2 remaining steps (matched contrasts); RQ3 terminal step; RQ4 thinking (rel\_pos $\times$ mode); RQ5 error type. Figures from \texttt{runs/analysis/figures}.}
+
+\section{Limitations}
+\todo{4-bit 8B models only; planted vs.\ natural errors; position/remaining/$K$ dependence; one sample per cell (binary item difficulty); English Wikipedia; possible contamination (closed-book filter only); spaCy type tags (audit numbers); thinking-mode prefix placement.}
+
+\section{Conclusion}
+\todo{}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}
