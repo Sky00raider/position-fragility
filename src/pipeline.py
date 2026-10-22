@@ -30,7 +30,9 @@ from .store import append_jsonl, cell_key, cell_seed, done_keys, git_hash, read_
 # ---------------------------------------------------------------- shared helpers
 
 def run_items(cfg: Config) -> list[dict]:
-    return data.load_items(cfg.data.splits, cfg.data.hops, cfg.data.limit_per_split_hop)
+    items = data.load_items(cfg.data.splits, cfg.data.hops, cfg.data.limit_per_split_hop)
+    n, s = cfg.data.num_shards, cfg.data.shard
+    return [it for i, it in enumerate(items) if i % n == s] if n > 1 else items
 
 
 def generate_cells(cfg: Config, cells: list[dict], out_path, step: str) -> None:

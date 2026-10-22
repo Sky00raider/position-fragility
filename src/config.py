@@ -28,6 +28,8 @@ class DataCfg:
     splits: list[str] = field(default_factory=lambda: ["dev"])
     hops: list[int] = field(default_factory=lambda: [3, 4])
     limit_per_split_hop: int | None = None  # None = all items
+    shard: int = 0                # split the items across machines/people: this one runs
+    num_shards: int = 1           # items with index % num_shards == shard
 
 
 @dataclass
@@ -67,6 +69,10 @@ class Config:
 
     @property
     def run_dir(self) -> Path:
+        """Shards write to separate folders; seeds use run_name only, so a sharded run
+        produces exactly the same cells as an unsharded one. Analysis merges shard folders."""
+        if self.data.num_shards > 1:
+            return REPO_ROOT / "runs" / f"{self.run_name}__shard{self.data.shard}of{self.data.num_shards}"
         return REPO_ROOT / "runs" / self.run_name
 
 

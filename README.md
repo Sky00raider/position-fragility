@@ -110,3 +110,10 @@ python -m pytest -q
 | dropped.jsonl | cells dropped by validity rules, with reason |
 | continuations.jsonl | raw continuations |
 | scored.jsonl | final trial records (schema in CLAUDE.md) |
+
+## Free cloud GPUs (Kaggle / Colab)
+`notebooks/cloud_run.ipynb` runs the pilot or a shard of the main run on a free T4 (Kaggle recommended:
+30 GPU h/week, background runs, 2×T4 used in parallel). Setup steps are in the notebook's first cell.
+To split a run across teammates, each sets `SHARD=k, NUM_SHARDS=4` in the settings cell; the analysis
+merges the shard folders (`runs/<run>__shard<k>of4`). Regenerate the notebook with
+`python scripts/build_notebook.py notebooks/cloud_run.ipynb`.
