@@ -1,7 +1,7 @@
 # Core deps (CPU dev box and GPU box). Python 3.11 or 3.12.
 # On a CPU-only machine install torch first from the CPU index (see README).
 torch>=2.4
-transformers>=4.51,<5      # Qwen3 chat template needs >= 4.51
+transformers>=4.56         # Qwen3 template needs >= 4.51; `dtype=` kwarg >= 4.56. No upper cap: vLLM >= 0.1x needs v5
 accelerate>=0.33
 huggingface_hub>=0.24
 pyyaml>=6.0

@@ -20,8 +20,11 @@ exec > >(tee -a "$LOG") 2>&1
 
 echo "=== pilot $STAMP on $(hostname) ==="
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv || { echo "nvidia-smi failed: no GPU visible"; exit 1; }
-python -c "import vllm, torch; print('vllm', vllm.__version__, '| torch', torch.__version__, '| cuda', torch.version.cuda)" \
-  || { echo "vLLM not importable: see README GPU setup"; exit 1; }
+# import the classes we actually use: `import vllm` alone is lazy and hides broken dependencies
+python -c "import vllm, torch, transformers; from vllm import LLM, SamplingParams; \
+print('vllm', vllm.__version__, '| torch', torch.__version__, '| cuda', torch.version.cuda, '| transformers', transformers.__version__)" \
+  || { echo "vLLM not importable: run  pip install vllm==\$(pip show vllm | awk '/^Version/{print \$2}') 'transformers>=5'  and retry"; exit 1; }
+pip check >/dev/null 2>&1 || { echo "WARNING: pip check reports dependency conflicts:"; pip check | head -n 10; }
 git rev-parse --short HEAD
 
 if [ ! -f data/items/musique_dev_34hop.jsonl ] || [ ! -f data/items/musique_train_34hop.jsonl ]; then

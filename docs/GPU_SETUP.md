@@ -53,6 +53,12 @@ bash scripts/run_pilot.sh
 If step 5 prints `False`, or vLLM errors with "no kernel image" / "sm_120", the vLLM wheel was not
 built for Blackwell: send the error, we'll install the CUDA 12.8 build.
 
+If vLLM fails with `cannot import name 'PreTrainedConfig' from 'transformers'`, transformers got
+downgraded below what vLLM needs (fixed in requirements.txt on Oct 22). Repair with:
+```bash
+pip install "vllm==$(pip show vllm | awk '/^Version/{print $2}')" "transformers>=5" && pip check
+```
+
 ## D. Send the result back
 
 The last line of the pilot says `Send this file to the team: pilot_results_....tar.gz`.

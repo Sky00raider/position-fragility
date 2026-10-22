@@ -74,7 +74,7 @@ class HFBackend(Backend):
         self.tok = load_tokenizer(cfg)
         dtype = torch.float32 if cfg.device == "cpu" else torch.bfloat16
         self.model = AutoModelForCausalLM.from_pretrained(
-            cfg.model_id, revision=cfg.revision, torch_dtype=dtype,
+            cfg.model_id, revision=cfg.revision, dtype=dtype,   # `torch_dtype` was renamed in transformers v5
         ).to(cfg.device).eval()
 
     def generate(self, prompt_ids, seeds, max_tokens):
