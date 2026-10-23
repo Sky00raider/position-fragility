@@ -165,7 +165,7 @@ Llama-3.1-8B-Instruct & 0.6 & 0.9 & -- & 1024 \\
 \end{tabular}
 \end{table}
 
-\textbf{Decoding} (Table~\ref{tab:decoding}) follows each model's recommended sampling settings and is identical across all conditions within a model--mode pair. Closed-book runs cap generation at 512 tokens in non-thinking mode. Each cell draws one sample with its own seed, derived from a SHA-256 hash of (run, item, condition, hop, error type), so results do not depend on batching and interrupted runs resume reproducibly. Llama's chat template adds a fixed system header (``Today Date: 26 Jul 2024''), identical for all prompts. \tbd{thinking-mode token cap: 4096 kept, or raised to 6144 if pilot truncation $>5\%$; report truncation rate.}
+\textbf{Decoding} (Table~\ref{tab:decoding}) follows each model's recommended sampling settings and is identical across all conditions within a model--mode pair. Closed-book runs cap generation at 512 tokens in non-thinking mode. Each cell draws one sample with its own seed, derived from a SHA-256 hash of (run, item, condition, hop, error type), so results do not depend on batching and interrupted runs resume reproducibly. Llama's chat template adds a fixed system header (``Today Date: 26 Jul 2024''), identical for all prompts. The thinking-mode cap of 4{,}096 new tokens truncated 6\% of pilot baselines; truncated baselines are ineligible and no pilot continuation was truncated, so we kept the cap. Per-cell truncation rates are reported in \tbd{appendix table}.
 
 \subsection{Item counts}
 \tbd{Items attempted per split and $K$; eligible items per model--mode (overall, linear); cells run; cells dropped by validity rule. Target from the power analysis: 300--400 eligible items per $K$ per model.}
