@@ -181,9 +181,10 @@ Expected eligible: ~350–450 (nothink), ~300 (think). Launched with `scripts/ov
 (order: Qwen nothink → Qwen think → Llama).
 
 ### Open decisions / to report **[deviation] [limit]**
-- **Thinking token cap kept at 4096** although pilot-2 baseline truncation was 6% (the plan said
-  raise to 6144 above 5%). Truncated baselines are simply ineligible, and continuations had 0%
-  truncation, so the cap does not bias recovery; raising it would cost hours. Must be stated.
+- **Thinking token cap kept at 4096 (decided 2026-10-23, team agreed)** although pilot-2 baseline
+  truncation was 6% (the plan said raise to 6144 above 5%). Truncated baselines are simply
+  ineligible, and continuations had 0% truncation, so the cap does not bias recovery; raising it
+  would cost hours. Must be stated in Setup; report main-run truncation rates (`truncation.csv`).
 - Modes are compared on different item sets (eligibility differs: 6% vs 20%). Report the
   intersection-set analysis as well, and item difficulty as a covariate.
 - Eligibility selects items the model solves along MuSiQue's decomposition: results describe
