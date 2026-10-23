@@ -20,7 +20,7 @@ seed: 0
 data:
   splits: [dev, train]
   hops: [3, 4]
-  limit_per_split_hop: null   # set from `estimate` after the GPU pilot
+  limit_per_split_hop: 600    # per split x K: dev 600+405, train 600+600 = 2205 items; revisit after pilot2
 eligibility:
   f1_threshold: 0.8
   debug_relaxed: false

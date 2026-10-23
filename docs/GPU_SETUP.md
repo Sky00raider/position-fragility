@@ -78,3 +78,15 @@ cp pilot_results_*.tar.gz /mnt/c/Users/$(cmd.exe /c "echo %USERNAME%" 2>/dev/nul
 
 If the run crashes or the PC restarts: `cd ~/position-fragility && source .venv/bin/activate &&
 bash scripts/run_pilot.sh` again. It continues where it stopped.
+
+## E. Main run (overnight, after the pilot is approved)
+
+```bash
+cd ~/Documents/position-fragility && source .venv/bin/activate && git pull
+bash scripts/overnight.sh        # Qwen normal -> Llama normal -> Qwen thinking, ~6 h total
+tail -f logs/main_*.log          # optional: watch (Ctrl+C only stops watching)
+```
+It keeps running if you close the terminal and blocks the PC from sleeping. **Don't game while it
+runs** (it uses ~80% of the GPU memory). To get the GPU back: `bash scripts/stop_run.sh`; to
+continue later: `bash scripts/overnight.sh` again (finished work is kept). At the end it writes
+`main_results_*.tar.gz`: send that file.

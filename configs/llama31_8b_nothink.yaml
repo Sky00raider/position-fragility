@@ -4,7 +4,7 @@ model_id: hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
 tokenizer_id: hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
 revision: db1f81ad4b8c7e39777509fac66c652eb0a52f91   # pinned 2026-10-22
 quant: awq4
-gpu: "3070"
+gpu: "5070"
 mode: nothink
 decoding:                 # Meta default sampling
   temperature: 0.6
@@ -13,13 +13,15 @@ decoding:                 # Meta default sampling
   max_tokens: 1024
 closed_book_max_tokens: 512
 max_model_len: 8192
-gpu_memory_utilization: 0.90
+gpu_memory_utilization: 0.80     # 12 GB card also drives the desktop: leave headroom
+max_num_batched_tokens: 4096     # caps activation memory per step (8192 OOMed on the 5070)
+enforce_eager: false
 batch_size: 128
 seed: 0
 data:
   splits: [dev, train]
   hops: [3, 4]
-  limit_per_split_hop: null
+  limit_per_split_hop: 600    # per split x K: dev 600+405, train 600+600 = 2205 items; revisit after pilot2
 eligibility:
   f1_threshold: 0.8
   debug_relaxed: false
