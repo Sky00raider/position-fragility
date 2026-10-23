@@ -77,3 +77,8 @@ one sample). `noprefix` rows have k=0. `explicit_sc` / `doubt_marker` stay null 
 
 ## Commands
 See README.md. Tests: `python -m pytest -q`.
+
+## Keep the lab notebook current
+`docs/HISTORY.md` records every decision, result and deviation from the design doc, dated, with
+commit hashes and paper-section tags. The paper is written from it: **append an entry whenever a
+decision is made or a run produces numbers.**
