@@ -13,6 +13,7 @@ if command -v systemd-inhibit >/dev/null; then
 else
   INHIBIT=()
 fi
+if [ -z "${VIRTUAL_ENV:-}" ] && [ -f .venv/bin/activate ]; then set +u; source .venv/bin/activate; set -u; fi
 nohup "${INHIBIT[@]}" bash scripts/run_main.sh "$@" >/dev/null 2>&1 &
 sleep 3
 echo "started (pid $!). Sleep is blocked while it runs. Watch: tail -f logs/main_*.log"

@@ -9,6 +9,9 @@
 # bundled into pilot_results_*.tar.gz: send that file back to the team.
 # Safe to re-run after a crash: every step resumes where it stopped.
 set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+# use the project venv even if the caller forgot to activate it
+if [ -z "${VIRTUAL_ENV:-}" ] && [ -f .venv/bin/activate ]; then set +u; source .venv/bin/activate; set -u; fi
 export TQDM_MININTERVAL=30   # progress bars update every 30 s, so the log stays readable
 
 CONFIGS=("$@")

@@ -9,6 +9,9 @@
 #   headline results first; Llama can be stopped in the morning and finished later)
 # Every step resumes where it stopped: re-run the same command after a crash or a stop.
 set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+# use the project venv even if the caller forgot to activate it
+if [ -z "${VIRTUAL_ENV:-}" ] && [ -f .venv/bin/activate ]; then set +u; source .venv/bin/activate; set -u; fi
 export TQDM_MININTERVAL=60
 
 CONFIGS=("$@")
