@@ -53,7 +53,7 @@ bash scripts/run_pilot.sh
 If step 5 prints `False`, or vLLM errors with "no kernel image" / "sm_120", the vLLM wheel was not
 built for Blackwell: send the error, we'll install the CUDA 12.8 build.
 
-**Disk space:** about 15 GB must be free where models download (`~/.cache/huggingface`). If the run
+**Disk space:** at least 8 GB free (10 GB comfortable; +6 GB if also running Llama) where models download (`~/.cache/huggingface`). If the run
 hangs after a "Not enough free disk space" warning: `pip cache purge` (frees several GB), or put
 `export HF_HOME=/bigger/drive/hf_cache` in `~/.bashrc`, then rerun.
 

@@ -26,14 +26,19 @@ print('vllm', vllm.__version__, '| torch', torch.__version__, '| cuda', torch.ve
   || { echo "vLLM not importable: run  pip install vllm==\$(pip show vllm | awk '/^Version/{print \$2}') 'transformers>=5'  and retry"; exit 1; }
 pip check >/dev/null 2>&1 || { echo "WARNING: pip check reports dependency conflicts:"; pip check | head -n 10; }
 
-# model weights go to HF_HOME (default ~/.cache/huggingface): need ~15 GB free (8B AWQ ~6 GB + caches)
+# model weights go to HF_HOME (default ~/.cache/huggingface).
+# Qwen3-8B-AWQ ~6 GB + vLLM/FlashInfer caches ~1.5 GB + results -> need 8 GB; Llama adds ~6 GB.
+# (Weights already downloaded count as used space, so a rerun needs less.)
 HF_DIR="${HF_HOME:-$HOME/.cache/huggingface}"
 mkdir -p "$HF_DIR"
 FREE_GB=$(df -Pk "$HF_DIR" | awk 'NR==2 {print int($4/1024/1024)}')
-echo "free disk at $HF_DIR: ${FREE_GB} GB"
-if [ "$FREE_GB" -lt 15 ]; then
-  echo "!! less than 15 GB free. Free space (pip cache purge) or set HF_HOME to a bigger drive, then rerun."
+HAVE_QWEN=$([ -d "$HF_DIR/hub/models--Qwen--Qwen3-8B-AWQ" ] && du -sk "$HF_DIR/hub/models--Qwen--Qwen3-8B-AWQ" | awk '{print int($1/1024/1024)}' || echo 0)
+echo "free disk at $HF_DIR: ${FREE_GB} GB (Qwen3-8B-AWQ already cached: ${HAVE_QWEN} GB)"
+if [ $((FREE_GB + HAVE_QWEN)) -lt 8 ]; then
+  echo "!! need ~8 GB free for Qwen3-8B. Free space (pip cache purge) or set HF_HOME to a bigger drive, then rerun."
   exit 1
+elif [ "$FREE_GB" -lt 15 ]; then
+  echo "note: under 15 GB free: enough for Qwen, not for Llama as well."
 fi
 git rev-parse --short HEAD
 
