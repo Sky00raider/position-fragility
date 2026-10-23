@@ -12,7 +12,9 @@ decoding:                 # Qwen3 recommended thinking settings
   max_tokens: 4096        # raise to 6144 if baseline truncation on the GPU pilot > 5%
 closed_book_max_tokens: 4096
 max_model_len: 8192
-gpu_memory_utilization: 0.90
+gpu_memory_utilization: 0.80     # 12 GB card also drives the desktop: leave headroom
+max_num_batched_tokens: 4096     # caps activation memory per step (8192 OOMed on the 5070)
+enforce_eager: false             # set true if CUDA-graph/compile errors persist
 batch_size: 128
 seed: 0
 data:

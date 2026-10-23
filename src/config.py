@@ -56,6 +56,8 @@ class Config:
     closed_book_max_tokens: int | None = None   # None = same as decoding.max_tokens
     max_model_len: int = 8192
     gpu_memory_utilization: float = 0.90
+    max_num_batched_tokens: int | None = None   # vLLM per-step token budget; lower = less activation memory
+    enforce_eager: bool = False                 # vLLM: skip torch.compile + CUDA graphs (slower, most robust)
     batch_size: int = 64
     seed: int = 0
     device: str = "cpu"           # hf backend only: "cpu" or "cuda"

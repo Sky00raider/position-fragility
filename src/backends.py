@@ -41,10 +41,11 @@ class VLLMBackend(Backend):
         os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
         from vllm import LLM
         self.cfg = cfg
+        extra = {"max_num_batched_tokens": cfg.max_num_batched_tokens} if cfg.max_num_batched_tokens else {}
         self.llm = LLM(
             model=cfg.model_id, tokenizer=cfg.tokenizer_id or cfg.model_id, revision=cfg.revision,
             max_model_len=cfg.max_model_len, gpu_memory_utilization=cfg.gpu_memory_utilization,
-            seed=cfg.seed,
+            enforce_eager=cfg.enforce_eager, seed=cfg.seed, **extra,
         )
 
     def generate(self, prompt_ids, seeds, max_tokens):
