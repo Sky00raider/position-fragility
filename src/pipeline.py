@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import argparse
+import itertools
 import re
 import sys
 import time
@@ -105,6 +106,31 @@ def model_chain(text: str, think: bool, hop_source: str) -> dict:
             "hop_text": hop_text, "hops": parse_hops(hop_text), "pred": extract_final(answer_part)}
 
 
+def align_hops(model_answers: list[str], item: dict, thr: float) -> tuple[list[int] | None, str | None]:
+    """Map the model's K hops onto the gold hops. Returns (hop_map, failure reason).
+
+    Gold order first. In branching items independent hops may come in either order, so any
+    order that matches every hop AND respects the gold dependencies (#N refs) is accepted:
+    a hop may only come after all hops it depends on. Then position k is still exact, and
+    `remaining` (dependents of the hop) is unchanged.
+    """
+    K = item["K"]
+    extra = lambda g: item["answer_aliases"] + [item["answer"]] if g == K - 1 else []  # noqa: E731
+    ok = [[hop_matches(a, item["hops"][g]["answer"], extra(g), thr) for g in range(K)] for a in model_answers]
+    if all(ok[j][j] for j in range(K)):
+        return list(range(K)), None
+    any_order = False
+    for perm in itertools.permutations(range(K)):
+        if all(ok[j][perm[j]] for j in range(K)):
+            any_order = True
+            pos = {g: j for j, g in enumerate(perm)}
+            if all(pos[d - 1] < pos[g] for g in range(K) for d in item["hops"][g]["depends_on"]):
+                return list(perm), None
+    if any_order:
+        return None, "hop_order_violates_dependencies"
+    return None, "hop_mismatch_" + ",".join(str(j + 1) for j in range(K) if not ok[j][j])
+
+
 def check_item(item: dict, base: dict, closed: dict, cfg: Config) -> dict:
     """Doc §6.1 eligibility. Returns a record with every reason that fails."""
     K, thr = item["K"], cfg.eligibility.f1_threshold
@@ -119,21 +145,13 @@ def check_item(item: dict, base: dict, closed: dict, cfg: Config) -> dict:
         reasons.append("final_wrong")
     hops = ch["hops"]
     well_formed = hops_well_formed(hops, K)
+    hop_map = None
     if not well_formed:
         reasons.append(f"hop_count_{len(hops)}_vs_{K}")
     else:
-        extra = lambda i: item["answer_aliases"] + [item["answer"]] if i == K - 1 else []  # noqa: E731
-        in_order = [hop_matches(h.answer, item["hops"][i]["answer"], extra(i), thr) for i, h in enumerate(hops)]
-        if not all(in_order):
-            # would they match in some other order? (model answered branches in a different order)
-            unused, ok = set(range(K)), True
-            for h in hops:
-                m = next((g for g in sorted(unused) if hop_matches(h.answer, item["hops"][g]["answer"], extra(g), thr)), None)
-                if m is None:
-                    ok = False
-                    break
-                unused.discard(m)
-            reasons.append("hop_order" if ok else "hop_mismatch_" + ",".join(str(i + 1) for i, x in enumerate(in_order) if not x))
+        hop_map, reason = align_hops([h.answer for h in hops], item, thr)
+        if reason:
+            reasons.append(reason)
     closed_ch = model_chain(closed["text"], cfg.think, cfg.eligibility.hop_source)
     closed_correct = exact_match(closed_ch["pred"], golds)
     if closed_correct:
@@ -153,6 +171,9 @@ def check_item(item: dict, base: dict, closed: dict, cfg: Config) -> dict:
         "reasons": reasons, "pred": ch["pred"], "closed_book_pred": closed_ch["pred"],
         "closed_book_correct": closed_correct, "model_hops": [h.answer for h in hops],
         "gold_hops": [h["answer"] for h in item["hops"]],
+        # model hop position -> gold hop index (identity unless independent branches were reordered)
+        "hop_map": hop_map if hop_map is not None else list(range(K)),
+        "reordered": hop_map is not None and hop_map != list(range(K)),
         "hops_in_answer": n_answer == K, "hops_in_think": n_think == K,
         "n_gen_tokens": base["n_gen_tokens"], "truncated": base["truncated"],
         # text the inject step cuts the prefix from (the model's own hop lines)
@@ -242,17 +263,20 @@ def cmd_inject(args):
             "item_id": it["id"], "split": it["split"], "K": K, "composition": it["composition"],
             "is_linear": it["is_linear"], "gold": it["answer"], "gold_aliases": it["answer_aliases"],
             "chain_source": e["chain_source"], "eligibility_relaxed": e["eligibility_relaxed"],
+            "reordered": e.get("reordered", False),
         }
+        hop_map = e.get("hop_map") or list(range(K))   # model position -> gold hop index
         cells.append({**common, "condition": "noprefix", "k": 0, "error_type": None, "prefix": "",
                       "remaining": None, "remaining_linear": None, "rel_pos": None, "is_terminal": False,
                       "orig_value": None, "new_value": None})
         for k in range(1, K + 1):
-            pos = {"k": k, "remaining": it["hops"][k - 1]["remaining_dep"], "remaining_linear": K - k,
+            g = hop_map[k - 1]
+            pos = {"k": k, "gold_hop": g + 1, "remaining": it["hops"][g]["remaining_dep"], "remaining_linear": K - k,
                    "rel_pos": k / K, "is_terminal": k == K, "orig_value": hops[k - 1].answer}
             cells.append({**common, **pos, "condition": "clean", "error_type": None,
                           "prefix": build_prefix(chain, hops, k), "new_value": None})
             for et in ("in_context", "off_context"):
-                value, reason, n_cand = pick_value(it, k, hops[k - 1].answer, et, clean_text, off_pool)
+                value, reason, n_cand = pick_value(it, k, hops[k - 1].answer, et, clean_text, off_pool, gold_idx=g)
                 if value is None:
                     dropped.append({**common, **pos, "condition": "inject", "error_type": et,
                                     "reason": reason, "n_candidates": n_cand})

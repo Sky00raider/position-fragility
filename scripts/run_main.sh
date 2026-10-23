@@ -4,14 +4,15 @@
 #     bash scripts/overnight.sh          # recommended: detached + sleep blocked, see that file
 #     bash scripts/run_main.sh           # foreground
 #
-# Order: fast runs first, so a failure late at night does not cost them:
-#   Qwen3-8B nothink (~0.5 h) -> Llama-3.1-8B nothink (~0.5 h) -> Qwen3-8B think (~5-6 h)
+# Order: headline Qwen runs first, optional Llama last (~8-9 h total):
+#   Qwen3-8B nothink (~1-1.5 h) -> Qwen3-8B think (~5.5-6 h) -> Llama-3.1-8B nothink (~1-1.5 h, optional:
+#   headline results first; Llama can be stopped in the morning and finished later)
 # Every step resumes where it stopped: re-run the same command after a crash or a stop.
 set -uo pipefail
 export TQDM_MININTERVAL=60
 
 CONFIGS=("$@")
-[ ${#CONFIGS[@]} -eq 0 ] && CONFIGS=(qwen3_8b_nothink llama31_8b_nothink qwen3_8b_think)
+[ ${#CONFIGS[@]} -eq 0 ] && CONFIGS=(qwen3_8b_nothink qwen3_8b_think llama31_8b_nothink)
 STAMP=$(date +%Y%m%d_%H%M)
 mkdir -p logs
 LOG="logs/main_${STAMP}.log"

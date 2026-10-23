@@ -46,9 +46,9 @@ def hop_answer_matches(pred: str | None, golds: list[str], f1_threshold: float =
     """Does a model's hop answer match a gold hop answer?
 
     Exact match or token-F1 >= threshold (doc §6.1), after dropping parentheticals the model
-    adds ("Vatican City (assumed ...)"). Also accepts a gold answer contained as whole words in
-    a slightly longer prediction ("Da Nang, Vietnam" for "Da Nang", "22 times" for "22"), at most
-    `max_extra_words` longer, so sentences that merely mention the answer do not match.
+    adds ("Vatican City (assumed ...)"). Also accepts whole-word containment in either direction
+    when the longer side has at most `max_extra_words` extra words ("Da Nang, Vietnam" for
+    "Da Nang", "Vivaldi" for "Antonio Vivaldi"), so sentences that merely mention it do not match.
     """
     if not pred:
         return False
@@ -58,7 +58,11 @@ def hop_answer_matches(pred: str | None, golds: list[str], f1_threshold: float =
     p = normalize(core)
     for g in golds:
         ng = normalize(g)
-        if ng and f" {ng} " in f" {p} " and len(p.split()) <= len(ng.split()) + max_extra_words:
+        if not ng or not p:
+            continue
+        # either side may carry a few extra words: "Da Nang, Vietnam" ~ "Da Nang", "Vivaldi" ~ "Antonio Vivaldi"
+        short, long_ = sorted([p, ng], key=lambda s: len(s.split()))
+        if f" {short} " in f" {long_} " and len(long_.split()) <= len(short.split()) + max_extra_words:
             return True
     return False
 

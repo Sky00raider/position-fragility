@@ -27,7 +27,7 @@ class Decoding:
 class DataCfg:
     splits: list[str] = field(default_factory=lambda: ["dev"])
     hops: list[int] = field(default_factory=lambda: [3, 4])
-    limit_per_split_hop: int | None = None  # None = all items
+    limit_per_split_hop: int | dict | None = None  # None = all; int; or {K: n or None} per hop count
     shard: int = 0                # split the items across machines/people: this one runs
     num_shards: int = 1           # items with index % num_shards == shard
 

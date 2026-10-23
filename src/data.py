@@ -270,11 +270,16 @@ def _order_key(item_id: str) -> str:
 
 
 def load_items(splits, hops, limit_per_split_hop=None) -> list[dict]:
-    """Prepared items in a fixed pseudo-random order; `limit` takes the first N per split x K."""
+    """Prepared items in a fixed pseudo-random order; the limit takes the first N per split x K.
+
+    The limit is an int (same for every K), a dict {K: int or None} (e.g. {3: 300, 4: None} to
+    keep every 4-hop item), or None (all items).
+    """
     out = []
     for split in splits:
         items = sorted(read_jsonl(items_path(split)), key=lambda it: _order_key(it["id"]))
         for K in hops:
+            lim = limit_per_split_hop.get(K) if isinstance(limit_per_split_hop, dict) else limit_per_split_hop
             sel = [it for it in items if it["K"] == K]
-            out.extend(sel[:limit_per_split_hop] if limit_per_split_hop else sel)
+            out.extend(sel[:lim] if lim else sel)
     return out

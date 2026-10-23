@@ -84,13 +84,14 @@ def _ranked(cands: list[dict], orig: str, prefer_titles: bool, salt: str, rel: s
 
 
 def pick_value(item: dict, k: int, orig_value: str, error_type: str, clean_chain: str,
-               off_pool: list[dict]) -> tuple[str | None, str | None, int]:
+               off_pool: list[dict], gold_idx: int | None = None) -> tuple[str | None, str | None, int]:
     """Return (new_value, drop_reason, n_candidates_tried).
 
     Walks the ranked candidates of the right type and returns the first one that passes
     every validity rule. If none passes, reports the rule that failed for the best candidate.
     """
-    tag = item["hops"][k - 1]["tag"]
+    gold_hop = item["hops"][k - 1 if gold_idx is None else gold_idx]   # type of the gold hop at this position
+    tag = gold_hop["tag"]
     salt = f"13|{item['id']}|{k}|{error_type}"
     if error_type == "in_context":
         pool = [c for c in item["distractor_candidates"] if c["tag"] == tag]
@@ -101,7 +102,7 @@ def pick_value(item: dict, k: int, orig_value: str, error_type: str, clean_chain
         pool = [c for c in off_pool if c["tag"] == tag and c["item_id"] != item["id"]
                 and normalize(c["text"]) and normalize(c["text"]) not in context]
         ranked = _ranked(pool, orig_value, prefer_titles=False, salt=salt,
-                         rel=relation(item["hops"][k - 1].get("question", "")))
+                         rel=relation(gold_hop.get("question", "")))
     if not ranked:
         return None, f"no_candidate_with_tag_{tag}", 0
     first_reason = None

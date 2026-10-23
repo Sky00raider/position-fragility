@@ -83,7 +83,7 @@ bash scripts/run_pilot.sh` again. It continues where it stopped.
 
 ```bash
 cd ~/Documents/position-fragility && source .venv/bin/activate && git pull
-bash scripts/overnight.sh        # Qwen normal -> Llama normal -> Qwen thinking, ~6 h total
+bash scripts/overnight.sh        # Qwen normal -> Qwen thinking -> Llama normal, ~8-9 h total
 tail -f logs/main_*.log          # optional: watch (Ctrl+C only stops watching)
 ```
 It keeps running if you close the terminal and blocks the PC from sleeping. **Don't game while it
