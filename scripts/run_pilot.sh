@@ -46,28 +46,31 @@ if [ ! -f data/items/musique_dev_34hop.jsonl ] || [ ! -f data/items/musique_trai
   python -m src.pipeline prepare-data || exit 1
 fi
 
+run_dir() { python -c "from src.config import load_config; print(load_config('$1').run_dir)"; }
+
 FAILED=()
 for name in "${CONFIGS[@]}"; do
   cfg="configs/${name}.yaml"
   main_cfg="configs/$(grep '^extends:' "$cfg" | awk '{print $2}')"
-  echo; echo "################ $name ################"
+  rdir=$(run_dir "$cfg")
+  echo; echo "################ $name -> $rdir ################"
   run() { echo "--- $*"; "$@" || { echo "!! FAILED: $*"; FAILED+=("$name: $*"); return 1; }; }
-  run python scripts/gpu_smoke.py --config "$main_cfg" || continue
+  if [ "${SKIP_SMOKE:-0}" != "1" ]; then run python scripts/gpu_smoke.py --config "$main_cfg" || continue; fi
   run python -m src.pipeline baseline --config "$cfg" || continue
   run python -m src.pipeline eligible --config "$cfg" || continue
   run python -m src.pipeline inject   --config "$cfg" || continue
   run python -m src.pipeline continue --config "$cfg" || continue
   run python -m src.pipeline score    --config "$cfg" || continue
-  python scripts/sanity.py --config "$cfg" --n 5 > "runs/${name}/sanity.txt" 2>&1
+  python scripts/sanity.py --config "$cfg" --n 5 > "$rdir/sanity.txt" 2>&1
   run python -m src.pipeline estimate --config "$cfg" --n-items 2000
 done
 
 RUNS=()
-for name in "${CONFIGS[@]}"; do [ -f "runs/${name}/scored.jsonl" ] && RUNS+=("runs/${name}"); done
+for name in "${CONFIGS[@]}"; do rdir=$(run_dir "configs/${name}.yaml"); [ -f "$rdir/scored.jsonl" ] && RUNS+=("$rdir"); done
 [ ${#RUNS[@]} -gt 0 ] && python -m src.analysis --runs "${RUNS[@]}" --out runs/analysis_pilot
 
 OUT="pilot_results_$(hostname)_${STAMP}.tar.gz"
-tar czf "$OUT" "$LOG" runs/pilot_* runs/analysis_pilot 2>/dev/null
+tar czf "$OUT" "$LOG" runs/pilot*_* runs/analysis_pilot 2>/dev/null
 echo
 if [ ${#FAILED[@]} -gt 0 ]; then printf '!! failed step: %s\n' "${FAILED[@]}"; fi
 echo "=== done. Send this file to the team: $OUT ($(du -h "$OUT" | cut -f1)) ==="

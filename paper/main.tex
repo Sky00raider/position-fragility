@@ -63,11 +63,25 @@ All models receive the same instruction (Fig.~\ref{fig:prompt}), asking for one 
 \small
 \begin{verbatim}
 Answer the question using only the paragraphs
-below. Reason one hop at a time.
+below. Reason one hop at a time. This question
+needs exactly {K} hops.
 Write each hop on its own line as
-"Hop N: <sub-question> -> <answer>".
-After the last hop, write
-"Final answer: <short answer>".
+"Hop N: <sub-question> -> <answer>", where
+<answer> is a short name, date or number,
+not a sentence.
+After hop {K}, write "Final answer: <short answer>".
+
+Example of the format (a 3-hop question):
+Question: What is the official language of the
+country whose capital is the city where the
+Eiffel Tower stands?
+Hop 1: In which city does the Eiffel Tower
+stand? -> Paris
+Hop 2: Which country has Paris as its
+capital? -> France
+Hop 3: What is the official language of
+France? -> French
+Final answer: French
 
 Paragraphs:
 Title: <title>
@@ -75,11 +89,11 @@ Title: <title>
 ...
 Question: <question>
 \end{verbatim}
-\caption{Prompt used for all models and modes. The closed-book variant drops ``using only the paragraphs below'' and the paragraphs.}
+\caption{Prompt used for all models and modes ($K$ = the item's hop count). The closed-book variant drops ``using only the paragraphs below'' and the paragraphs. Stating $K$, asking for short hop answers and showing one invented example were added after the pilot, in which the unconstrained prompt led Qwen3-8B to split questions into 5--11 hops and answer hops in full sentences, leaving almost no chain alignable with the gold decomposition.}
 \label{fig:prompt}
 \end{figure}
 
-\textbf{Eligibility.} An item enters the injection study only if its own chain (i)~gives a correct final answer (exact match after SQuAD normalization~\cite{squad} against the answer and its aliases), (ii)~contains exactly $K$ hop lines numbered $1..K$, (iii)~matches the gold decomposition hop by hop, in order (each hop answer has normalized exact match or token-F1 $\ge 0.8$ with the gold hop answer; the final hop is also checked against the answer aliases), (iv)~is not truncated, and (v)~the closed-book answer is wrong, which removes items the model can answer from memory. Every failed criterion is logged per item. Requirement (iii) guarantees that the hop we corrupt is the hop the gold decomposition says it is, which is what makes the error position exact.
+\textbf{Eligibility.} An item enters the injection study only if its own chain (i)~gives a correct final answer (exact match after SQuAD normalization~\cite{squad} against the answer and its aliases), (ii)~contains exactly $K$ hop lines numbered $1..K$, (iii)~matches the gold decomposition hop by hop, in order (after removing parenthetical remarks, each hop answer has normalized exact match or token-F1 $\ge 0.8$ with the gold hop answer, or contains it as whole words with at most three extra words; the final hop is also checked against the answer aliases), (iv)~is not truncated, and (v)~the closed-book answer is wrong, which removes items the model can answer from memory. Every failed criterion is logged per item. Requirement (iii) guarantees that the hop we corrupt is the hop the gold decomposition says it is, which is what makes the error position exact.
 
 \subsection{Conditions}
 For an eligible item with $K$ hops we run:

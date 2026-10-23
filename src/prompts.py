@@ -8,9 +8,21 @@ from __future__ import annotations
 
 from .parse import THINK_OPEN, Hop
 
-OPEN_BOOK = """Answer the question using only the paragraphs below. Reason one hop at a time.
-Write each hop on its own line as "Hop N: <sub-question> -> <answer>".
-After the last hop, write "Final answer: <short answer>".
+# v2 (after the GPU pilot, 2026-10-23): v1 let Qwen3-8B split questions into 5-11 hops and answer
+# hops in full sentences, so almost no own-chain matched the gold decomposition. v2 states the hop
+# count, asks for short answers and shows one worked example (made up, not from MuSiQue).
+INSTRUCTIONS = """Reason one hop at a time. This question needs exactly {K} hops.
+Write each hop on its own line as "Hop N: <sub-question> -> <answer>", where <answer> is a short name, date or number, not a sentence.
+After hop {K}, write "Final answer: <short answer>".
+
+Example of the format (a 3-hop question):
+Question: What is the official language of the country whose capital is the city where the Eiffel Tower stands?
+Hop 1: In which city does the Eiffel Tower stand? -> Paris
+Hop 2: Which country has Paris as its capital? -> France
+Hop 3: What is the official language of France? -> French
+Final answer: French"""
+
+OPEN_BOOK = """Answer the question using only the paragraphs below. """ + INSTRUCTIONS + """
 
 Paragraphs:
 {paragraphs}
@@ -18,9 +30,7 @@ Paragraphs:
 Question: {question}"""
 
 # Closed-book filter: same instructions, no paragraphs.
-CLOSED_BOOK = """Answer the question. Reason one hop at a time.
-Write each hop on its own line as "Hop N: <sub-question> -> <answer>".
-After the last hop, write "Final answer: <short answer>".
+CLOSED_BOOK = """Answer the question. """ + INSTRUCTIONS + """
 
 Question: {question}"""
 
@@ -31,8 +41,8 @@ def format_paragraphs(paragraphs: list[dict]) -> str:
 
 def user_message(item: dict, closed_book: bool = False) -> str:
     if closed_book:
-        return CLOSED_BOOK.format(question=item["question"])
-    return OPEN_BOOK.format(paragraphs=format_paragraphs(item["context"]), question=item["question"])
+        return CLOSED_BOOK.format(question=item["question"], K=item["K"])
+    return OPEN_BOOK.format(paragraphs=format_paragraphs(item["context"]), question=item["question"], K=item["K"])
 
 
 def is_qwen3(model_id: str) -> bool:

@@ -42,6 +42,27 @@ def max_f1(pred: str | None, golds: list[str]) -> float:
     return max((token_f1(pred, g) for g in golds), default=0.0)
 
 
+def hop_answer_matches(pred: str | None, golds: list[str], f1_threshold: float = 0.8, max_extra_words: int = 3) -> bool:
+    """Does a model's hop answer match a gold hop answer?
+
+    Exact match or token-F1 >= threshold (doc §6.1), after dropping parentheticals the model
+    adds ("Vatican City (assumed ...)"). Also accepts a gold answer contained as whole words in
+    a slightly longer prediction ("Da Nang, Vietnam" for "Da Nang", "22 times" for "22"), at most
+    `max_extra_words` longer, so sentences that merely mention the answer do not match.
+    """
+    if not pred:
+        return False
+    core = re.sub(r"\([^)]*\)", " ", pred).strip() or pred
+    if exact_match(core, golds) or max_f1(core, golds) >= f1_threshold:
+        return True
+    p = normalize(core)
+    for g in golds:
+        ng = normalize(g)
+        if ng and f" {ng} " in f" {p} " and len(p.split()) <= len(ng.split()) + max_extra_words:
+            return True
+    return False
+
+
 def overlaps(a: str, b: str) -> bool:
     """True if normalized a equals, contains, or is contained in normalized b.
 

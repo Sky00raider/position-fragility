@@ -21,7 +21,7 @@ from . import data
 from .backends import load_tokenizer, make_backend
 from .config import Config, load_config
 from .inject import build_off_pool, pick_value
-from .normalize import exact_match, max_f1, normalize
+from .normalize import exact_match, hop_answer_matches, max_f1, normalize
 from .parse import extract_final, hops_well_formed, parse_hops, split_think
 from .prompts import build_ids, build_prefix, prefill_text, user_message
 from .store import append_jsonl, cell_key, cell_seed, done_keys, git_hash, read_jsonl, write_jsonl
@@ -94,8 +94,7 @@ def cmd_baseline(args):
 # ---------------------------------------------------------------- eligibility
 
 def hop_matches(pred: str, gold_hop: str, extra_golds: list[str], f1_threshold: float) -> bool:
-    golds = [gold_hop, *extra_golds]
-    return exact_match(pred, golds) or max_f1(pred, golds) >= f1_threshold
+    return hop_answer_matches(pred, [gold_hop, *extra_golds], f1_threshold)
 
 
 def model_chain(text: str, think: bool, hop_source: str) -> dict:

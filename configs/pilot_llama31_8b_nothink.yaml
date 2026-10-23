@@ -1,6 +1,6 @@
 # Pilot (doc §9): same settings as the main config, 25 dev items per K.
 extends: llama31_8b_nothink.yaml
-run_name: pilot_llama31_8b_nothink
+run_name: pilot2_llama31_8b_nothink          # v2 prompt (hop count + example); pilot_ = v1
 data:
   splits: [dev]
   limit_per_split_hop: 25

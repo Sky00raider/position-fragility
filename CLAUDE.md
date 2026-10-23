@@ -27,7 +27,10 @@ multiple samples, Gemma, R1-Distill, Claude API, explicit/silent self-correction
    passed to either backend. Pipeline code is identical for vLLM and HF; only config changes.
 4. Per-cell seed = sha256 of `run_name|item_id|condition|k|error_type`. Never built-in `hash()`.
 5. Eligibility (doc §6.1): final answer correct; exactly K hop lines numbered 1..K; each hop i
-   matches gold hop i (alias match for last hop, else normalized EM or token-F1 >= 0.8);
+   matches gold hop i (`hop_answer_matches`: EM / token-F1 >= 0.8 / gold contained with <= 3 extra
+   words, parentheticals stripped; aliases count for the last hop);
+   Prompt v2 (after the 2026-10-23 pilot) states K, asks for short hop answers and shows one
+   invented example; pilot run names `pilot2_*` (v1 = `pilot_*`).
    closed-book answer wrong. `debug_relaxed` (CPU configs only) keeps any item with K hop lines.
    `debug_gold_chain` (CPU configs only; Qwen3-0.6B cannot follow the hop format) substitutes a
    gold stand-in chain, flagged `chain_source: gold_debug`. Never enable either in a real config.
