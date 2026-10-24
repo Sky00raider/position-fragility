@@ -610,3 +610,17 @@ clean cells.
   `fallback_config`; think_trace_v2 → v1 `qwen3_8b_think_trace`; other vetted configs dropped), so v2 and
   the think_trace fallback fit in one command/night. Swap simulated with the real configs. Analysis output
   is now `runs/analysis_<stamp>` per run (a fallback run would otherwise have overwritten analysis_main).
+
+### v2 gate PASSED on the GPU box (24 Oct 22:26 run, judge prompt v2) **[method] [result]**
+`grep -A16 "judge Qwen" logs/main_20261024_2226.log` (screenshot from friend). Reference acceptable 39%,
+0 unparsed answers. Rule chosen on tune half: **both** (tune precision 0.65, accept 61%, recall 0.95).
+**Holdout: precision 0.68, acceptance 52%, recall 0.96.** All 300: both 0.66 / 57% / 0.96;
+same_kind 0.65 / 58% / 0.96 (nearly identical: the believable question adds little); believable alone
+0.47 / 84%. For scale: unfiltered v1 values 0.39; a careful human vs the same labels 0.74. The 0.65 bar
+was set from the human ceiling before these numbers existed (not post hoc). Passed narrowly on tune.
+Remaining judge error mode (from its kind labels): it sometimes labels the CORRECT answer with the
+candidate's kind (Presque Isle County called a "US state" when the candidate is Tennessee; Oregon called
+a country when the candidate is France). Validity gap found (v1 too, not the judge): the planted value
+can appear in the question itself ("Along with ABC and NBC … broadcaster" → "ABC"): 7/5,413 (Qwen
+nothink), 0/2,565 (think), 9/3,289 (Llama) inject cells, all in-context → negligible; not fixed mid-run;
+can be excluded in analysis. Run continued with vet round 1 (14,575 candidates, 12,066 new to judge).
