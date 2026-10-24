@@ -56,8 +56,11 @@ As of the Oct 24 session they had NOT arrived: `runs/qwen3_8b_think_trace` is on
 - [x] Paper: Results section drafted from runs/analysis_main (+ item-count table, setup tbds). Two
       `\tbd`s wait for think_trace: RQ4 paragraph and the Method sentence on the injection site.
       If think_trace adds panels, re-copy `runs/analysis_main/figures/recovery_linear.png` to `paper/figures/`.
-- [ ] Paper (rest): Intro, Related Work,
-      Abstract, Limitations; add think_trace to Method/Setup; fill `\tbd{}`; verify every `% VERIFY` in refs.bib
+- [x] Paper: Abstract, Intro, Related Work, RQs, Limitations, Conclusion drafted (53cf62a). 9 `\tbd`s
+      left: authors, repo URL, hand audit (2), think_trace (5). Not compiled yet (Overleaf); ~5.5k words,
+      check the venue page limit. Remaining `% VERIFY` in refs.bib: lanham, chen2025, yee venue.
+- [ ] Paper: compile on Overleaf (upload main.tex, refs.bib, figures/), fix layout, trim to page limit;
+      team fills authors + repo URL; verify remaining refs
 - [ ] Hand audit by 2 teammates → `python scripts/make_audit.py --score <filled csv>` → Method numbers
 - [ ] Keep `../main_results_*` backed up (Google Drive)
 
