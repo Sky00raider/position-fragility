@@ -291,6 +291,56 @@ change proposed: the granularity misses are real EM misses (the model wrote the 
 form; its own baseline wrote the gold form). Most are shorter than gold, so `correct_contains`
 (gold inside the final line) does not rescue them either.
 
+### Explicit vs silent recovery (E1, exploratory; e09f44d) **[result] [method] [deviation]**
+Added to `src/analysis.py` although CLAUDE.md listed E1 labels out of scope: **rule-based only**
+(no LLM judge, no 4-person validation as in doc §8.2). Recovered inject cell (clean twin correct) =
+**explicit** if a doubt marker (`wait|actually|mistake|incorrect|re-?check|should be|not correct|
+correction|however`, case-insensitive, whole words) is in the same or next sentence as the true hop-k
+value (gold hop answer, or the model's own original value) or the planted value; otherwise
+**silent** (strict: using the right value without a flag is silent). Think mode is split by flag
+location (before / after `</think>`). Tables `silent_explicit_{linear,all}.csv` (model × mode × K ×
+k × error type) and `_summary_` (intermediate vs terminal); 10 random examples per label in
+`runs/analysis_main/silent_explicit_examples.txt`.
+
+Linear items, intermediate hops (terminal in brackets):
+
+| | RR | explicit rate | silent rate | explicit share of recoveries | doubt marker, non-recovered |
+|---|---|---|---|---|---|
+| Qwen3 nothink | 0.58 [0.01] | 0.000 | 0.58 | 0% (0/1770) | 0.1% |
+| Qwen3 think | 0.82 [0.60] | 0.002 | 0.82 | 0.2% (2/909; both inside `<think>`) | 1.0% |
+| Llama nothink | 0.62 [0.10] | 0.057 | 0.56 | 9.3% [6.0%] | 14.9% [1.6%] |
+
+- **Recovery is almost entirely silent.** Qwen never flags the planted value in nothink, and in
+  think mode does so in 2 of 1,488 recoveries (all items); it just rewrites the hop with the right entity
+  (fits the audit above: post-splice thinking is ~110 tokens of hop lines with no prose). Not a regex
+  artefact: other doubt words ("but", "not", "let me", "hmm", "wrong") occur in ≤ 0.7% of Qwen
+  recoveries. Llama flags in ~9% of recoveries, more at k=2 than k=1 (K=3 off-context: 19% vs 6%).
+- Doubt markers do not mark failure: Llama uses them more when it fails (15%) than when it recovers
+  (12%), typically "Not found … However, …" before giving up or restarting.
+- Hand-checked: the first 6 Llama explicit examples in the file are true flags ("Hop 2 is incorrect
+  as Middelburg is a city in South Africa, not South Korea"); both Qwen-think explicit cells are
+  true flags. Example for the paper (Qwen3 think, `3hop1__38095_48661_15069`, k=2, planted
+  "Louisville" for "Ethiopia"): inside `<think>` → *"Wait, that's not right. Let me check again. …
+  the largest contributor is Ethiopia"*, then the correct chain after `</think>` (1953). Silent
+  examples were not hand-checked beyond reading; labels must be called rule-based in the paper.
+
+### Shared-item mode comparison (robustness; e09f44d) **[result] [limit]**
+Qwen3 nothink vs think restricted to items eligible in both modes. Small: think only attempted 600
+three-hop items. Shared items: **K=3 67 (63 linear), K=4 31 (20 linear)**, out of 855/167 and
+67/217 eligible. Tables `*_intersection.csv`, figure `mode_compare_linear_intersection.png`. Mode
+difference is on paired cells (same item, k, error type, clean twin correct in both modes).
+Linear shared items:
+- **Thinking still helps at every hop.** Intermediate RR 0.64 → 0.88 (diff +0.24, CI 0.17–0.31);
+  terminal 0.01 → 0.72 (+0.70, CI 0.63–0.78). Same as on the full sets (0.58 vs 0.82).
+- **Terminal < intermediate in both modes**: nothink −0.58/−0.66 (in/off-context), think
+  −0.16/−0.13, all CIs exclude 0.
+- **PSI:** nothink stays negative (K=3 −0.14 in-context, −0.28 off-context, CI excludes 0). In think
+  mode it shrinks: K=3 +0.00 in-context (CI ±0.09), −0.10 off-context (CI −0.21 to +0.01); K=4 CIs
+  ±0.2. So on shared items late-stage fragility is clear without thinking and weak or absent
+  with it. The regression interaction is n.s. (rel_pos:mode β=+1.01, p=0.34; n=695 cells, 81
+  items), so this does **not** establish a shape difference: it says the full-set think PSI
+  (−0.09 to −0.12) is not robust on this small shared set. All-items agree.
+
 ---
 
 ## Paper hooks (quick index)
@@ -303,6 +353,7 @@ form; its own baseline wrote the gold form). Most are shorter than gold, so `cor
 | Method: outcomes | outcomes strict + contained |
 | Setup: models, decoding, hardware | GPU memory; main-run plan; decoding table in `paper/main.tex` |
 | Results: pilot / yield | pilot 1 and 2 tables |
-| Analysis: silent recovery example | thinking-mode injection entry |
-| Limitations | scope reduction, type-tag noise, token cap, different item sets per mode, selection by eligibility, 1 sample per cell, 4-bit 8B only, think prefill cuts deliberation (why clean twins fail) |
+| Analysis: silent recovery example | thinking-mode injection entry; explicit vs silent recovery (E1) |
+| Results: H4 robustness | shared-item mode comparison |
+| Limitations | scope reduction, type-tag noise, token cap, different item sets per mode (shared-item check), selection by eligibility, 1 sample per cell, 4-bit 8B only, think prefill cuts deliberation (why clean twins fail) |
 | Appendix: reproducibility | GPU box setup problems; GPU memory; pinned revisions in `configs/` |
