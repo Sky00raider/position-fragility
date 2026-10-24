@@ -457,7 +457,7 @@ the paper draft is ahead of schedule. v1 results stay as the fallback and are ne
   clean cells if that run exists, else generates them.
 - `inject` now prints 15 random planted values; v2 analysis goes to `runs/analysis_v2`.
 - CLAUDE.md rule 12 added (stimuli are inspected and rated before GPU runs). Tests: `tests/test_vet.py`
-  (52 → 58 tests). CPU smoke test with Qwen3-0.6B as model and judge: baseline/eligible/vet/inject run
+  (46 → 52 tests). CPU smoke test with Qwen3-0.6B as model and judge: baseline/eligible/vet/inject run
   end to end; 0.6B rejects nearly everything (parsing verified on raw outputs), so the rest of the path
   was exercised with forced accepts (`configs/cpu_qwen3_0p6b_nothink_v2test.yaml`).
 - Pre-flight checks on the dev box (no GPU) against the real v1 runs: current prompt code rebuilds
