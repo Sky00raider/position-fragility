@@ -420,3 +420,16 @@ Places: −0.14 to −0.21 (both nothink models, K=3). ORG/NORP/other (worst val
 So implausible values dilute the position effect rather than create it. Caveat: groups differ in hops
 and items (PERSON mostly at hop 1). Paper: audit paragraph in Method, robustness paragraph in RQ1,
 Limitations updated; the Intro no longer calls the values "plausible".
+
+### Plausible-only check on the main contrast (200-cell sample) **[result] [limit]**
+2026-10-24. Random 200 recovery cells, Qwen3 nothink, K=3 linear, 100 at k=1 + 100 at k=2
+(`runs/audit/plaus200_{key,blind,rated}.csv`, gitignored; rater = 1 Sonnet subagent, blind to outcome,
+~60k tokens). Rated type_ok 105/200, plausible 86/200; I spot-checked 24 ratings, all reasonable.
+Type-ok & plausible share similar by hop (k=1 44%, k=2 38%).
+| subset | n early/late | RR early → late | PSI [95% CI, unpaired bootstrap] |
+|---|---|---|---|
+| all 200 | 100/100 | 0.73 → 0.48 | −0.25 [−0.38, −0.11] |
+| type_ok & plausible | 44/38 | 0.68 → 0.37 | **−0.31 [−0.52, −0.11]** |
+| not ok | 56/62 | 0.77 → 0.55 | −0.22 [−0.38, −0.05] |
+Late-stage fragility holds on plausible values alone; implausible values are recovered more (absolute
+RR overstated). Added to the RQ1 robustness paragraph and Limitations.

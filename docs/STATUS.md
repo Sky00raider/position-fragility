@@ -66,7 +66,7 @@ As of the Oct 24 session they had NOT arrived: `runs/qwen3_8b_think_trace` is on
       check the venue page limit. Remaining `% VERIFY` in refs.bib: lanham, chen2025, yee venue.
 - [ ] Paper: compile on Overleaf (upload main.tex, refs.bib, figures/), fix layout, trim to page limit;
       team fills authors + repo URL; verify remaining refs
-- [ ] OPTIONAL (deferred to save Pro-plan usage): plausibility check on a random 200–400 planted values
+- [x] DONE (200-value version, see HISTORY) OPTIONAL: plausibility check on a random 200–400 planted values
       from Qwen nothink K=3 linear, k=1 vs k=2 (Sonnet subagent rater, same criteria as audit), then PSI
       on plausible-only cells. ~70–200k tokens. Not required: tag-group check already in the paper.
 - [ ] Hand audit: now ONE teammate fills `docs/audit/audit_sheet_B.csv` (rater A = Sonnet, done) → merge → `python scripts/make_audit.py --score <filled csv>` → Method numbers
