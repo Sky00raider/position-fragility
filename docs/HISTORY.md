@@ -566,3 +566,18 @@ Not applied: "2.3–3.2-fold is wrong" — reviewer divided rounded values; unro
 2.27/2.55/3.15/3.19, so 2.3–3.2 stands. References were already all checked against arXiv.
 Team decisions raised: second human rater (human-human κ), venue rules (double-blind → remove
 affiliation, repo URL, "timestamped commit"), contribution (iii) rewrite if think_trace fails.
+
+### Fourth review: evaluated, mostly applied **[paper]**
+2026-10-24. Applied: H2 wording everywhere now "consistent with remaining steps; position effect not
+detected but not ruled out (branching CIs exceed ±5 pp)"; mechanism made quantitative (Qwen K=3:
+predicted early RR 0.50+0.50×0.38≈0.69 vs observed 0.66; late 0.51 vs 0.49) and the "remaining=1 ≡ error
+feeds the final hop" alternative addressed (the final hop catches late errors as often as a non-final
+hop catches early ones); silent recovery caveated as partly format-induced (removed from abstract);
+"2.3–3.2-fold" replaced by "more than doubles" everywhere (two reviewers misread the rounded values);
+RQ4 baseline labelled Qwen3; McNemar condition (both clean twins correct) restored; SEs clustered on
+MuSiQue question across model-modes; "(90% CIs)" where the equivalence rule is invoked; closed-book
+filter = one sample (Measurement); decoding difference as a second H4 confound (Limitations);
+contribution (i) "errors injected into models' own reasoning chains". Added an Acknowledgment with a
+DRAFT AI-use statement (IEEE requires it; authors must approve; marked \tbd). Cuts to stay at 8 pages:
+Related Work "Position effects in the input" (3 refs gone), tokenization detail, Llama system header,
+closed-book cap, RQ4 shared-item and clean-twin McNemar detail.
