@@ -180,6 +180,98 @@ def terminal_table(df, reps, rng) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
+def fixed_remaining_table(df, reps, rng) -> pd.DataFrame:
+    """RQ2 with branching items: in 3hop2/4hop2/4hop3 some hops at different positions have the SAME
+    number of dependent later hops (e.g. 3hop2: hops 1 and 2 both feed hop 3, remaining = 1), so
+    position varies at fixed remaining. Within-item contrast RR(later k) - RR(earlier k), error types
+    pooled, per (composition, remaining, k pair), plus one pooled row per model x mode."""
+    rec = recovery_rows(df[~df["is_linear"] & ~df["is_terminal"]])
+    out = []
+    if rec.empty or "composition" not in rec:
+        return pd.DataFrame(out)
+    for keys, g in rec.groupby(GROUP):
+        pool_e, pool_l = {}, {}
+        for (comp, rem), h in g.groupby(["composition", "remaining"]):
+            ks = sorted(h["k"].unique())
+            for a, b in itertools.combinations(ks, 2):
+                e = h[h["k"] == a].groupby("item_id")["correct"].apply(list).to_dict()
+                l_ = h[h["k"] == b].groupby("item_id")["correct"].apply(list).to_dict()
+                ids = np.array(sorted(set(e) & set(l_)))   # paired: same item at both positions
+                if len(ids) == 0:
+                    continue
+                for i in ids:
+                    pool_e.setdefault(i, []).extend(e[i])
+                    pool_l.setdefault(i, []).extend(l_[i])
+                lo, hi = boot_ci(ids, lambda s: rate_on(s, l_) - rate_on(s, e), reps, rng)
+                out.append({**dict(zip(GROUP, keys)), "composition": comp, "remaining": rem,
+                            "k_early": a, "k_late": b, "n_items": len(ids), "RR_early": rate_on(ids, e),
+                            "RR_late": rate_on(ids, l_), "diff": rate_on(ids, l_) - rate_on(ids, e),
+                            "ci_lo": lo, "ci_hi": hi})
+        if pool_e:
+            ids = np.array(sorted(pool_e))
+            lo, hi = boot_ci(ids, lambda s: rate_on(s, pool_l) - rate_on(s, pool_e), reps, rng)
+            out.append({**dict(zip(GROUP, keys)), "composition": "pooled", "remaining": np.nan,
+                        "k_early": np.nan, "k_late": np.nan, "n_items": len(ids),
+                        "RR_early": rate_on(ids, pool_e), "RR_late": rate_on(ids, pool_l),
+                        "diff": rate_on(ids, pool_l) - rate_on(ids, pool_e), "ci_lo": lo, "ci_hi": hi})
+    return pd.DataFrame(out)
+
+
+def psi_pooled_terminal_table(df, reps, rng) -> pd.DataFrame:
+    """H3: what PSI looks like if the terminal hop is (wrongly) counted as "late":
+    PSI_pooled = RR(k in {K-1, K}) - RR(k=1), next to the intermediate-only PSI."""
+    rec, out = recovery_rows(df), []
+    for keys, g in rec.groupby(GROUP + ["error_type", "K"]):
+        K = keys[-1]
+        if K not in EARLY_LATE:
+            continue
+        early, late = EARLY_LATE[K]
+        lists = lambda ks: g[g["k"].isin(ks)].groupby("item_id")["correct"].apply(list).to_dict()  # noqa: E731
+        e, l_, lp = lists([early]), lists([late]), lists([late, K])
+        ids = np.array(sorted(set(e) | set(lp)))
+        if len(ids) == 0:
+            continue
+        lo, hi = boot_ci(ids, lambda s: rate_on(s, lp) - rate_on(s, e), reps, rng)
+        out.append({**dict(zip(GROUP + ["error_type", "K"], keys)), "PSI": rate_on(ids, l_) - rate_on(ids, e),
+                    "PSI_pooled_terminal": rate_on(ids, lp) - rate_on(ids, e), "ci_lo": lo, "ci_hi": hi})
+    return pd.DataFrame(out)
+
+
+def position_vs_remaining(df) -> pd.DataFrame:
+    """Which predictor fits recovery better, per model x mode? Logistic models on intermediate inject
+    cells of all items (branching items partly decouple position from remaining). Base = chain shape
+    (composition, which also fixes K) + error_type + difficulty; then + rel_pos, + remaining, + both.
+    Lower AIC = better fit. Composition must be in the base: branching items are easier overall, and
+    without it that difference is wrongly credited to position (checked 2026-10-24)."""
+    import statsmodels.api as sm
+    import statsmodels.formula.api as smf
+    d = recovery_rows(df)
+    d = d[~d["is_terminal"]].copy()
+    d["y"] = d["correct"].astype(int)
+    d["item_difficulty"] = d["item_difficulty"].astype(float)
+    d["remaining"] = d["remaining"].astype(float)
+    out = []
+    if "composition" not in d:
+        d["composition"] = "K" + d["K"].astype(str)   # synthetic test data: chain shape unknown
+    for keys, g in d.groupby(GROUP):
+        covs = [t for t in ["C(composition)", "error_type", "item_difficulty"] if g[t.strip("C()")].nunique() > 1]
+        base = "y ~ " + (" + ".join(covs) if covs else "1")
+        rows = []
+        for name, extra in [("base", ""), ("+rel_pos", " + rel_pos"), ("+remaining", " + remaining"),
+                            ("+both", " + rel_pos + remaining")]:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                fit = smf.glm(base + extra, data=g, family=sm.families.Binomial()).fit()
+            row = {**dict(zip(GROUP, keys)), "model_spec": name, "n": len(g), "AIC": fit.aic}
+            for t in ("rel_pos", "remaining"):
+                row[f"beta_{t}"] = fit.params.get(t, np.nan)
+                row[f"p_{t}"] = fit.pvalues.get(t, np.nan)
+            rows.append(row)
+        best = min(r["AIC"] for r in rows)
+        out += [{**r, "dAIC_vs_best": r["AIC"] - best} for r in rows]
+    return pd.DataFrame(out)
+
+
 def mcnemar_table(df) -> pd.DataFrame:
     """Exact McNemar, early vs late on the same item (both clean twins correct), Holm-adjusted."""
     from statsmodels.stats.contingency_tables import mcnemar
@@ -543,9 +635,22 @@ def main(argv=None):
                              f"Recovery by corrupted hop ({name} items; terminal hop hollow)")
             fig_forest(psi, "PSI", figs / f"psi_{name}.png", f"PSI = RR_late − RR_early ({name} items)",
                        GROUP + ["error_type", "K"], "PSI (95% item-bootstrap CI)")
+            pooled_t = psi_pooled_terminal_table(d, args.reps, rng)
+            pooled_t.to_csv(tabs / f"psi_pooled_terminal_{name}.csv", index=False)
             report += [f"\n== {name} ==", "PSI:", psi.round(3).to_string(index=False) if len(psi) else "(none)",
                        "McNemar:", mcn.round(4).to_string(index=False) if len(mcn) else "(none)",
-                       text.split("\n\n")[0]]
+                       text.split("\n\n")[0],
+                       "PSI if the terminal hop were pooled with late (H3):",
+                       pooled_t.round(3).to_string(index=False) if len(pooled_t) else "(none)"]
+            if name == "all":   # RQ2 with branching items, where position and remaining come apart
+                fixed = fixed_remaining_table(d, args.reps, rng)
+                fixed.to_csv(tabs / "fixed_remaining_branching.csv", index=False)
+                fits = position_vs_remaining(d)
+                fits.to_csv(tabs / "position_vs_remaining_fit.csv", index=False)
+                report += ["\nPosition at fixed remaining (branching items, within item, error types pooled):",
+                           fixed.round(3).to_string(index=False) if len(fixed) else "(none)",
+                           "Position vs remaining, model fit (all items, intermediate):",
+                           fits.round(4).to_string(index=False)]
     truncation_table(df).to_csv(tabs / "truncation.csv", index=False)
 
     # E1 (exploratory): explicit vs silent recovery, rule-based labels

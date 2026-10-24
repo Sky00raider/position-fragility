@@ -489,3 +489,28 @@ main.tex now picks fonts by engine (`iftex`): pdfLaTeX/Overleaf unchanged (T1, T
 Gyre Termes, so local and Overleaf page counts should match closely. PDF committed as `paper/main.pdf`.
 Rebuild: download tectonic 0.15.0 (GitHub release, windows-msvc zip), then
 `tectonic --keep-logs --outdir <dir> paper/main.tex`; page count = "Output written ... (N pages" in main.log.
+
+### RQ2 revisited with branching items (after the Sonnet review) + pooled-terminal PSI (H3) **[result] [paper]**
+2026-10-24. Reviewer point: branching items (3hop2/4hop2/4hop3) have hops at different positions with
+the same `remaining`, so position can vary at fixed remaining. New in `src/analysis.py`:
+`fixed_remaining_table` (within-item, error types pooled), `position_vs_remaining` (per model x mode,
+logistic, composition fixed effects), `psi_pooled_terminal_table`. On v1 they were run standalone with
+their own rng (seed 0) into `runs/analysis_main/tables/` (`fixed_remaining_branching.csv`,
+`position_vs_remaining_fit.csv`, `psi_pooled_terminal_{linear,all}.csv`) so existing CIs in the paper
+don't shift; v2 gets them from the normal full run.
+- **Position at fixed remaining** (later minus earlier k, same item): Qwen nothink +0.05 [−0.02, 0.12]
+  (114 items; 3hop2 alone +0.01 [−0.07, 0.09], 85); Qwen think −0.01 [−0.10, 0.08] (42); **Llama −0.12
+  [−0.22, −0.02]** (69; 3hop2 −0.10 [−0.20, −0.00], 52).
+- **Fit comparison** (all items, intermediate; base = composition + error_type + difficulty): Qwen nothink
+  remaining better than rel_pos by ΔAIC 13.6, joint model remaining β=0.75 p<0.001, rel_pos p=0.76;
+  Llama ΔAIC 0.06, Qwen think 1.3 (indistinguishable). Pitfall: WITHOUT composition the fit favours
+  rel_pos (ΔAIC 29 for Qwen nothink) because branching items are easier overall (3hop2 rem=1 RR ≈0.71 vs
+  linear K3k2 0.49); fixed by putting composition in the base.
+- Conclusion: for Qwen3 late-stage fragility follows remaining steps, not position; Llama mixed.
+- **Pooled-terminal PSI** (late = {K−1, K}): Qwen nothink K3 −0.36/−0.45 vs −0.14/−0.20; Llama −0.30/
+  −0.40 vs −0.09/−0.13; think −0.17/−0.18 vs −0.11/−0.12 → pooling inflates PSI 2.3–3.2× (nothink).
+Paper: RQ2 rewritten; RQ3 reframed (near-zero terminal recovery is expected; its value is showing what
+pooling does, ASCoT); abstract, intro, conclusion, limitations updated. Still 8 pages.
+Other review points not yet done: hedge thinking claim in abstract, "every model and mode" qualifier,
+soften pipeline advice, "stated before the runs" evidence (design doc commit c9dbf5a, Oct 22, not OSF),
+mechanism analysis (where the correct value reappears). Declined: dropping the small K=4 rows.
