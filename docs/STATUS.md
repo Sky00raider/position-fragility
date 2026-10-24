@@ -9,6 +9,13 @@ think_trace. Friend was unavailable on Oct 24. Experiments close Oct 27: the run
 night of Oct 26 at the latest. If it can't, submit with v1 + the audit disclosure (paper already
 written that way).
 
+## Latest (24 Oct night)
+v2 gate FAILED on the GPU box (judge prompt v1 too weak; also the 0.75 bar was above the human ceiling
+of 0.74). Fixed in code (judge prompt v2, rule chosen on tune half / checked on holdout, bar 0.65; see
+HISTORY). Friend was asked to run the fallback `bash scripts/overnight.sh qwen3_8b_think_trace` that
+night and to send `logs/main_20261024_2201.log` + `runs/vet/qwen3_8b_nothink.jsonl`.
+Next GPU night (Oct 25 or 26): `git pull` then the same v2 command below.
+
 ## NEXT GPU RUN (v2 + think_trace in one overnight run; friend's box)
 Ask the friend to run, from the repo root:
     git pull && bash scripts/overnight.sh qwen3_8b_nothink_v2 qwen3_8b_think_v2 qwen3_8b_think_trace_v2 llama31_8b_nothink_v2
