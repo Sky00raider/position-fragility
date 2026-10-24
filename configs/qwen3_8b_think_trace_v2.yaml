@@ -8,3 +8,4 @@ reuse_baseline_from: qwen3_8b_think
 reuse_cells_from: qwen3_8b_think_trace
 vet_values: true
 vet_judge: qwen3_8b_nothink
+fallback_config: qwen3_8b_think_trace   # unvetted v1 values if the vet gate fails

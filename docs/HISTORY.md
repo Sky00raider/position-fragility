@@ -606,3 +606,7 @@ Fixes (CPU-tested end to end with Qwen3-0.6B as judge):
   judge's kind labels for its mistakes, so a failure is diagnosable from the log tail.
 Tests 52 → 54. Next GPU night: same v2 command; think_trace_v2 will reuse tonight's v1 think_trace
 clean cells.
+- Same night: run_main.sh falls back instead of stopping when the gate fails (config field
+  `fallback_config`; think_trace_v2 → v1 `qwen3_8b_think_trace`; other vetted configs dropped), so v2 and
+  the think_trace fallback fit in one command/night. Swap simulated with the real configs. Analysis output
+  is now `runs/analysis_<stamp>` per run (a fallback run would otherwise have overwritten analysis_main).

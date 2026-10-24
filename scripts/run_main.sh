@@ -40,12 +40,28 @@ fi
 
 run_dir() { python -c "from src.config import load_config; print(load_config('$1').run_dir)"; }
 vetted() { python -c "from src.config import load_config; print(int(load_config('$1').vet_values))"; }
+fallback() { python -c "from src.config import load_config; print(load_config('$1').fallback_config or '')"; }
 
-# planted values must pass the judge gate before any vetted run (see scripts/vet_gate.py)
+# planted values must pass the judge gate before any vetted run (see scripts/vet_gate.py).
+# If it fails, vetted configs are replaced by their fallback_config (if any) or dropped, so the
+# night still runs something useful (e.g. think_trace with the old values).
 for name in "${CONFIGS[@]}"; do
   if [ "$(vetted "configs/${name}.yaml")" = 1 ]; then
     echo "--- vet gate ($(date +%H:%M))"
-    python scripts/vet_gate.py --config "configs/${name}.yaml" || { echo "!! vet gate FAILED: nothing was run. Send the log to the team."; exit 1; }
+    if ! python scripts/vet_gate.py --config "configs/${name}.yaml"; then
+      KEPT=()
+      for n in "${CONFIGS[@]}"; do
+        if [ "$(vetted "configs/${n}.yaml")" = 1 ]; then
+          fb=$(fallback "configs/${n}.yaml")
+          [ -n "$fb" ] && KEPT+=("$fb")
+        else
+          KEPT+=("$n")
+        fi
+      done
+      echo "!! vet gate FAILED: vetted runs skipped. Running fallback instead: ${KEPT[*]:-nothing}"
+      [ ${#KEPT[@]} -eq 0 ] && exit 1
+      CONFIGS=("${KEPT[@]}")
+    fi
     break
   fi
 done
@@ -65,7 +81,7 @@ done
 
 RUNS=()
 for name in "${CONFIGS[@]}"; do rdir=$(run_dir "configs/${name}.yaml"); [ -f "$rdir/scored.jsonl" ] && RUNS+=("$rdir"); done
-AOUT=runs/analysis_main; [[ " ${CONFIGS[*]} " == *_v2* ]] && AOUT=runs/analysis_v2   # never overwrite v1 analysis
+AOUT="runs/analysis_${STAMP}"   # one folder per run: never overwrites an earlier analysis
 [ ${#RUNS[@]} -gt 0 ] && python -m src.analysis --runs "${RUNS[@]}" --out "$AOUT"
 
 OUT="main_results_$(hostname)_${STAMP}.tar.gz"

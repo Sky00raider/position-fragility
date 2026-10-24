@@ -77,6 +77,8 @@ class Config:
     vet_judge: str | None = None
     vet_per_round: int = 3        # candidates per cell judged per round (rounds stop once one passes)
     vet_max_per_cell: int = 12    # give up on a cell after this many rejected candidates
+    # config name to run instead if the vet gate fails (run_main.sh), so a GPU night is never wasted
+    fallback_config: str | None = None
 
     @property
     def mode_label(self) -> str:
