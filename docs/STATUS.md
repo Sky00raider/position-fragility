@@ -78,6 +78,10 @@ As of the Oct 24 session they had NOT arrived: `runs/qwen3_8b_think_trace` is on
 - [x] Paper: Abstract, Intro, Related Work, RQs, Limitations, Conclusion drafted (53cf62a). 9 `\tbd`s
       left: authors, repo URL, hand audit (2), think_trace (5). Not compiled yet (Overleaf); ~5.5k words,
       check the venue page limit. Remaining `% VERIFY` in refs.bib: lanham, chen2025, yee venue.
+- [x] Review work done (Sonnet + Gemini, HISTORY 2026-10-24): branching RQ2, mechanism, hedges, rework.
+      Paper = 8 pages with page 8 FULL; think_trace text will push to 9 -> trim once page limit is known.
+      Rebuild: Tectonic is in the old session scratchpad (re-download v0.15.0 if gone); figure for the
+      paper = figures/recovery_linear_paper.png (re-copy from runs/analysis_v2/figures after v2).
 - [x] Compiled locally with Tectonic: 8 pages, layout fixed, `paper/main.pdf` (HISTORY). [ ] Trim to page limit (VENUE LIMIT UNKNOWN);
       team fills authors + repo URL; verify remaining refs
 - [x] DONE (200-value version, see HISTORY) OPTIONAL: plausibility check on a random 200–400 planted values
