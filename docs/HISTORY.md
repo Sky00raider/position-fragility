@@ -469,3 +469,13 @@ the paper draft is ahead of schedule. v1 results stay as the fallback and are ne
   with Qwen3-0.6B as judge on 40 reference rows → accepts 0%, "GATE FAILED", exit code 1 (the stop path
   works). Candidate lists for `vet` build in 45 s for Qwen nothink (5,666 cells, 49k valid candidates,
   ≤12 per cell). Fallback if the GPU gate fails: run v1 `qwen3_8b_think_trace` that night.
+
+### Hand audit scored: human rater B + Sonnet rater A **[method] [result]**
+2026-10-24. Teammate filled `docs/audit/audit_sheet_B_completed.csv` (100/100, independent of A; the
+user confirmed it is the teammate's own work after I flagged that the notes read like an LLM's).
+Merged → `docs/audit/audit_sheet_filled.csv`; `make_audit.py --score`:
+- type_ok: A yes 50, B yes 43, both 42; agreement 91%, **κ = 0.82** (in-context both 17/50, off 25/50)
+- plausible: A yes 41, B yes 42, both 31; agreement 79%, **κ = 0.57** (in-context 15/50, off 16/50)
+A human confirms v1's planted-value problem, and Sonnet's labels (used for `data/vet/reference.csv`,
+the v2 gate's reference) agree well with a human on type, moderately on plausibility. In the paper:
+Method audit paragraph.
