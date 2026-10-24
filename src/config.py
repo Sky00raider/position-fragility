@@ -68,6 +68,15 @@ class Config:
     # "trace" = the model's own thinking text, mid-thought (think mode only)
     injection_site: str = "hops"
     reuse_baseline_from: str | None = None   # run_name whose baseline.jsonl to copy instead of regenerating
+    # run_name whose noprefix/clean continuations to copy (identical prompt ids only): they do not
+    # depend on the planted value, so a rerun with new planted values only generates inject cells
+    reuse_cells_from: str | None = None
+    # planted-value vetting by an LLM judge (src/vet.py): required for every real run since the
+    # 2026-10-24 audit. vet_judge = config name (in configs/) of the judge model, decoded greedily.
+    vet_values: bool = False
+    vet_judge: str | None = None
+    vet_per_round: int = 3        # candidates per cell judged per round (rounds stop once one passes)
+    vet_max_per_cell: int = 12    # give up on a cell after this many rejected candidates
 
     @property
     def mode_label(self) -> str:
@@ -116,7 +125,18 @@ def load_config(path: str | Path) -> Config:
         raise ValueError(f"backend must be vllm|hf, got {cfg.backend}")
     if cfg.injection_site not in ("hops", "trace") or (cfg.injection_site == "trace" and not cfg.think):
         raise ValueError(f"injection_site must be hops|trace (trace needs mode: think), got {cfg.injection_site}")
+    if cfg.vet_values and not cfg.vet_judge:
+        raise ValueError("vet_values: true needs vet_judge (a config name in configs/)")
     return cfg
+
+
+def judge_config(cfg: Config) -> Config:
+    """The vet judge's config, set to greedy decoding with a short output."""
+    j = load_config(REPO_ROOT / "configs" / f"{cfg.vet_judge}.yaml")
+    if j.think:
+        raise ValueError("vet_judge must be a nothink config (the judge answers in two short lines)")
+    j.decoding = Decoding(temperature=0.0, top_p=1.0, top_k=0, max_tokens=24)
+    return j
 
 
 def hf_token_present() -> bool:

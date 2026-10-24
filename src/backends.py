@@ -92,9 +92,11 @@ class HFBackend(Backend):
             n_max = max(1, min(max_tokens, room))
             x = torch.tensor([ids], device=self.cfg.device)
             with torch.no_grad():
+                # temperature 0 = greedy (the vet judge); vLLM does the same for temperature 0
+                sampling = dict(do_sample=True, temperature=d.temperature, top_p=d.top_p, top_k=d.top_k) \
+                    if d.temperature > 0 else dict(do_sample=False, temperature=None, top_p=None, top_k=None)
                 out = self.model.generate(
-                    x, attention_mask=torch.ones_like(x), do_sample=True,
-                    temperature=d.temperature, top_p=d.top_p, top_k=d.top_k,
+                    x, attention_mask=torch.ones_like(x), **sampling,
                     max_new_tokens=n_max, pad_token_id=self.tok.pad_token_id or self.tok.eos_token_id,
                 )
             new = out[0, len(ids):].tolist()

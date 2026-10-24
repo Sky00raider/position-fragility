@@ -1,0 +1,11 @@
+# CPU debug config for the v2 path (vet -> inject -> continue with reused cells). Results are meaningless.
+extends: cpu_qwen3_0p6b_nothink.yaml
+run_name: cpu_qwen3_0p6b_nothink_v2test
+reuse_baseline_from: cpu_qwen3_0p6b_nothink
+reuse_cells_from: cpu_qwen3_0p6b_nothink
+vet_values: true
+vet_judge: cpu_qwen3_0p6b_nothink
+vet_per_round: 2
+vet_max_per_cell: 4
+data:
+  limit_per_split_hop: 2

@@ -1,0 +1,10 @@
+# v2 (2026-10-24): same as qwen3_8b_think.yaml, but planted values are vetted by an LLM judge (src/vet.py)
+# after the audit found half of v1's values were the wrong kind of thing. Baseline and the
+# noprefix/clean continuations are copied from v1 (they do not depend on the planted value),
+# so only inject cells are generated. Gate first: python scripts/vet_gate.py --config <this file>
+extends: qwen3_8b_think.yaml
+run_name: qwen3_8b_think_v2
+reuse_baseline_from: qwen3_8b_think
+reuse_cells_from: qwen3_8b_think
+vet_values: true
+vet_judge: qwen3_8b_nothink

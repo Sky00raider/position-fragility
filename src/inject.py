@@ -5,6 +5,8 @@ in_context : same type tag, from the item's 4 shown distractor paragraphs
 off_context: same type tag, a gold hop answer of another item that appears nowhere
              in this item's question or shown paragraphs; answers to the same Wikidata
              relation ("X >> country") first, then closest length.
+With vetting on (config `vet_values`), a candidate must also pass the LLM judge in src/vet.py,
+because tags alone let a state replace a city or a network replace a person.
 """
 from __future__ import annotations
 
@@ -12,6 +14,7 @@ import re
 
 from .normalize import normalize, overlaps
 from .store import cell_seed
+from .vet import resolve_refs, vet_key
 
 YEAR_FORMAT = re.compile(r"^\d{4}$")
 
@@ -83,13 +86,16 @@ def _ranked(cands: list[dict], orig: str, prefer_titles: bool, salt: str, rel: s
         cell_seed(salt, c["text"])))
 
 
-def pick_value(item: dict, k: int, orig_value: str, error_type: str, clean_chain: str,
-               off_pool: list[dict], gold_idx: int | None = None) -> tuple[str | None, str | None, int]:
-    """Return (new_value, drop_reason, n_candidates_tried).
+def judge_question(item: dict, k: int, gold_idx: int | None = None) -> tuple[str, str]:
+    """(sub-question with #N refs filled in, gold hop answer): what the vet judge sees."""
+    gold_hop = item["hops"][k - 1 if gold_idx is None else gold_idx]
+    return resolve_refs(gold_hop.get("question", ""), [h["answer"] for h in item["hops"]]), gold_hop["answer"]
 
-    Walks the ranked candidates of the right type and returns the first one that passes
-    every validity rule. If none passes, reports the rule that failed for the best candidate.
-    """
+
+def valid_candidates(item: dict, k: int, orig_value: str, error_type: str, clean_chain: str,
+                     off_pool: list[dict], gold_idx: int | None = None):
+    """Yield (candidate text, None) for each ranked candidate of the right tag that passes every
+    validity rule, in rank order. If none passes, yields once (None, drop reason) at the end."""
     gold_hop = item["hops"][k - 1 if gold_idx is None else gold_idx]   # type of the gold hop at this position
     tag = gold_hop["tag"]
     salt = f"13|{item['id']}|{k}|{error_type}"
@@ -104,14 +110,43 @@ def pick_value(item: dict, k: int, orig_value: str, error_type: str, clean_chain
         ranked = _ranked(pool, orig_value, prefer_titles=False, salt=salt,
                          rel=relation(gold_hop.get("question", "")))
     if not ranked:
-        return None, f"no_candidate_with_tag_{tag}", 0
-    first_reason = None
+        yield None, f"no_candidate_with_tag_{tag}"
+        return
+    first_reason, any_valid = None, False
     for c in ranked:
         reason = check_validity(item, orig_value, c["text"], tag, c["tag"], clean_chain)
         if reason is None:
-            return c["text"], None, len(ranked)
+            any_valid = True
+            yield c["text"], None
         first_reason = first_reason or reason
-    return None, f"all_candidates_invalid:{first_reason}", len(ranked)
+    if not any_valid:
+        yield None, f"all_candidates_invalid:{first_reason}"
+
+
+def pick_value(item: dict, k: int, orig_value: str, error_type: str, clean_chain: str,
+               off_pool: list[dict], gold_idx: int | None = None,
+               vetted: dict[str, bool] | None = None) -> tuple[str | None, str | None, int]:
+    """Return (new_value, drop_reason, n_valid_candidates_seen).
+
+    Without `vetted`: the first candidate that passes every validity rule.
+    With `vetted` (vet cache, see src/vet.py): the first valid candidate the judge accepted.
+    Valid candidates are vetted in rank order, so a candidate with no verdict means the vet step
+    stopped here (its per-cell limit) and every earlier one was rejected.
+    """
+    subq, gold = judge_question(item, k, gold_idx) if vetted is not None else ("", "")
+    n = 0
+    for text, reason in valid_candidates(item, k, orig_value, error_type, clean_chain, off_pool, gold_idx):
+        if text is None:
+            return None, reason, n
+        n += 1
+        if vetted is None:
+            return text, None, n
+        verdict = vetted.get(vet_key(subq, gold, text))
+        if verdict is None:
+            return None, ("vet_rejected_all_vetted" if n > 1 else "not_vetted"), n
+        if verdict:
+            return text, None, n
+    return None, "vet_rejected_all", n
 
 
 def build_off_pool(items: list[dict]) -> list[dict]:

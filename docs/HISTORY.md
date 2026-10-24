@@ -433,3 +433,35 @@ Type-ok & plausible share similar by hop (k=1 44%, k=2 38%).
 | not ok | 56/62 | 0.77 → 0.55 | −0.22 [−0.38, −0.05] |
 Late-stage fragility holds on plausible values alone; implausible values are recovered more (absolute
 RR overstated). Added to the RQ1 robustness paragraph and Limitations.
+
+### v2: planted values vetted by an LLM judge, rerun of inject cells (code) **[method] [deviation]**
+2026-10-24. Decision (user approved): fix the planted values instead of only disclosing them, since
+the paper draft is ahead of schedule. v1 results stay as the fallback and are never overwritten.
+- **Judge** (`src/vet.py`): Qwen3-8B-AWQ non-thinking, greedy, max 24 tokens, one fixed judge for every
+  model/mode. Per candidate: "same kind of thing as the gold hop answer?" + "could a reasonable
+  reader believe it answers the sub-question?" (sub-question with #N refs filled in); accept only
+  yes+yes; unparseable = reject. Verdicts cached per judge in `runs/vet/<judge>.jsonl`.
+  Deviation: CLAUDE.md had "no LLM judge" (meant for *outcome* labels); this one only filters
+  *stimuli*, outcomes stay rule-based EM. Caveat for the paper: the judge is one of the tested models
+  (Qwen3-8B), so "plausible" means plausible to Qwen3; Llama is judged by the same Qwen judge.
+- **Selection** (`pick_value(..., vetted=)`): unchanged rank order and rules 1–4; with vetting the first
+  valid candidate the judge accepts wins. `vet` step judges `vet_per_round`=3 candidates per cell per
+  round until one passes, max `vet_max_per_cell`=12; otherwise the cell is dropped (`vet_rejected_*`).
+- **Gate** (`scripts/vet_gate.py`, enforced by `run_main.sh` before anything runs): judge vs.
+  `data/vet/reference.csv` (300 values from v1 with independent Sonnet labels: audit 100 + sample 200,
+  39% acceptable). Pass needs precision ≥ 0.75 (of judge-accepted values, share the reference accepts)
+  and acceptance ≥ 20%. Fail → nothing runs.
+- **Reuse**: v2 configs (`configs/*_v2.yaml`) copy the v1 baseline (`reuse_baseline_from`) and the
+  noprefix/clean continuations (`reuse_cells_from`, only rows with identical prefix and prompt length;
+  they keep their v1 seeds), so only inject cells are generated. think_trace_v2 reuses think_trace's
+  clean cells if that run exists, else generates them.
+- `inject` now prints 15 random planted values; v2 analysis goes to `runs/analysis_v2`.
+- CLAUDE.md rule 12 added (stimuli are inspected and rated before GPU runs). Tests: `tests/test_vet.py`
+  (52 → 58 tests). CPU smoke test with Qwen3-0.6B as model and judge: baseline/eligible/vet/inject run
+  end to end; 0.6B rejects nearly everything (parsing verified on raw outputs), so the rest of the path
+  was exercised with forced accepts (`configs/cpu_qwen3_0p6b_nothink_v2test.yaml`).
+- Pre-flight checks on the dev box (no GPU) against the real v1 runs: current prompt code rebuilds
+  v1 noprefix/clean prompts with identical lengths (300/300 sampled per run, all three runs), and
+  current eligibility reproduces v1 exactly (0 differences over 6,727 / 2,180 / 6,727 items). So v2
+  uses the same items and chains, and reuse of clean/noprefix cells will match. (The CPU smoke run
+  reused 0/18 because the old CPU run predates prompt v2: the length check correctly refused.)

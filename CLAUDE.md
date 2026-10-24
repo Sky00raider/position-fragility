@@ -54,6 +54,14 @@ rule-based exploratory analysis, `sc_label` in analysis.py; no LLM judge, no hum
     **Primary analysis = linear chains**; all items = robustness check.
 11. Every step is resumable (append-only jsonl, skip done keys). HF token comes from `.env`
     (`HF_TOKEN`); never print, log or commit it.
+12. **Look at the stimuli before spending GPU time on them.** (Added 2026-10-24: v1's planted values
+    were chosen by coarse spaCy tag match and never inspected before the main run; an audit after
+    the run found ~50% were the wrong kind of thing, e.g. a TV network as a person.) Every real
+    config sets `vet_values: true` (LLM judge, src/vet.py); `scripts/vet_gate.py` must pass on
+    `data/vet/reference.csv` before inject (run_main.sh enforces it); and any change to how
+    planted values (or prompts/prefixes) are built gets a random-sample read (inject prints 15)
+    plus an independent rating of ~100 values BEFORE the main run, not after. A proxy (tags,
+    regexes) is never accepted as evidence of stimulus quality by itself.
 
 ## Layout
 ```

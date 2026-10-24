@@ -39,13 +39,24 @@ if [ ! -f data/items/musique_dev_34hop.jsonl ] || [ ! -f data/items/musique_trai
 fi
 
 run_dir() { python -c "from src.config import load_config; print(load_config('$1').run_dir)"; }
+vetted() { python -c "from src.config import load_config; print(int(load_config('$1').vet_values))"; }
+
+# planted values must pass the judge gate before any vetted run (see scripts/vet_gate.py)
+for name in "${CONFIGS[@]}"; do
+  if [ "$(vetted "configs/${name}.yaml")" = 1 ]; then
+    echo "--- vet gate ($(date +%H:%M))"
+    python scripts/vet_gate.py --config "configs/${name}.yaml" || { echo "!! vet gate FAILED: nothing was run. Send the log to the team."; exit 1; }
+    break
+  fi
+done
+
 FAILED=()
 for name in "${CONFIGS[@]}"; do
   cfg="configs/${name}.yaml"
   rdir=$(run_dir "$cfg")
   echo; echo "################ $name -> $rdir  ($(date +%H:%M)) ################"
   ok=1
-  for step in baseline eligible inject continue score; do
+  for step in baseline eligible vet inject continue score; do
     echo "--- $step ($(date +%H:%M))"
     python -m src.pipeline "$step" --config "$cfg" || { echo "!! FAILED: $name $step"; FAILED+=("$name: $step"); ok=0; break; }
   done
@@ -54,10 +65,11 @@ done
 
 RUNS=()
 for name in "${CONFIGS[@]}"; do rdir=$(run_dir "configs/${name}.yaml"); [ -f "$rdir/scored.jsonl" ] && RUNS+=("$rdir"); done
-[ ${#RUNS[@]} -gt 0 ] && python -m src.analysis --runs "${RUNS[@]}" --out runs/analysis_main
+AOUT=runs/analysis_main; [[ " ${CONFIGS[*]} " == *_v2* ]] && AOUT=runs/analysis_v2   # never overwrite v1 analysis
+[ ${#RUNS[@]} -gt 0 ] && python -m src.analysis --runs "${RUNS[@]}" --out "$AOUT"
 
 OUT="main_results_$(hostname)_${STAMP}.tar.gz"
-tar czf "$OUT" "$LOG" "${RUNS[@]}" runs/analysis_main 2>/dev/null
+tar czf "$OUT" "$LOG" "${RUNS[@]}" "$AOUT" runs/vet 2>/dev/null
 echo
 if [ ${#FAILED[@]} -gt 0 ]; then printf '!! failed: %s\n' "${FAILED[@]}"; fi
 echo "=== done $(date +%H:%M). Send this file to the team: $OUT ($(du -h "$OUT" | cut -f1)) ==="

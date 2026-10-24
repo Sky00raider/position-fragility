@@ -3,6 +3,7 @@
     python -m src.pipeline prepare-data
     python -m src.pipeline baseline  --config configs/X.yaml
     python -m src.pipeline eligible  --config configs/X.yaml
+    python -m src.pipeline vet       --config configs/X.yaml   (if vet_values: LLM judge on planted values)
     python -m src.pipeline inject    --config configs/X.yaml
     python -m src.pipeline continue  --config configs/X.yaml
     python -m src.pipeline score     --config configs/X.yaml
@@ -12,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import itertools
+import random
 import re
 import shutil
 import sys
@@ -21,13 +23,14 @@ from pathlib import Path
 
 from . import data
 from .backends import load_tokenizer, make_backend
-from .config import Config, load_config
-from .inject import build_off_pool, pick_value
+from .config import REPO_ROOT, Config, judge_config, load_config
+from .inject import build_off_pool, judge_question, pick_value, valid_candidates
 from .normalize import exact_match, hop_answer_matches, max_f1, normalize
 from .parse import extract_final, hops_well_formed, parse_hops, split_think
 from .prompts import (build_ids, build_prefix, build_trace_prefix, find_trace_mention, prefill_text,
                       user_message)
 from .store import append_jsonl, cell_key, cell_seed, done_keys, git_hash, read_jsonl, write_jsonl
+from .vet import cache_path, judge_message, load_cache, parse_verdict, vet_key
 
 
 # ---------------------------------------------------------------- shared helpers
@@ -254,15 +257,106 @@ def print_eligibility(rows: list[dict], cfg: Config) -> None:
         print(f"throughput: {sum(t['n_tokens'] for t in timing) / sum(t['seconds'] for t in timing):.1f} tok/s")
 
 
+# ---------------------------------------------------------------- vet
+
+def vet_cache(judge_cfg: Config):
+    return cache_path(REPO_ROOT, judge_cfg.run_name)
+
+
+def inject_inputs(cfg: Config):
+    """What inject and vet both need: items, baselines, eligible records, off-context pool."""
+    items = {it["id"]: it for it in run_items(cfg)}
+    base = {r["item_id"]: r for r in read_jsonl(cfg.run_dir / "baseline.jsonl") if r["condition"] == "baseline"}
+    elig = [r for r in read_jsonl(cfg.run_dir / "eligibility.jsonl") if r["eligible"]]
+    off_pool = build_off_pool(data.load_items(["dev", "train"], [3, 4]))   # big pool, all prepared items
+    return items, base, elig, off_pool
+
+
+def run_judge(judge_cfg: Config, triples: list[tuple[str, str, str]], cache_file=None) -> dict[str, bool]:
+    """Judge (sub-question, gold, candidate) triples not yet in the cache; append verdicts after each
+    batch (resumable). Returns the full cache as vet_key -> ok."""
+    cache_file = cache_file or vet_cache(judge_cfg)
+    cache = load_cache(cache_file)
+    todo, seen = [], set()
+    for t in triples:
+        key = vet_key(*t)
+        if key not in cache and key not in seen:
+            seen.add(key)
+            todo.append(t)
+    print(f"[vet] {len(triples)} triples, {len(todo)} new to judge", flush=True)
+    if not todo:
+        return cache
+    tok = load_tokenizer(judge_cfg)
+    backend = make_backend(judge_cfg)
+    meta = {"judge_model": judge_cfg.model_id, "judge_revision": judge_cfg.revision}
+    for i in range(0, len(todo), judge_cfg.batch_size):
+        batch = todo[i: i + judge_cfg.batch_size]
+        ids = [build_ids(tok, judge_cfg.model_id, judge_message(*t), think=False) for t in batch]
+        gens = backend.generate(ids, [0] * len(batch), judge_cfg.decoding.max_tokens)
+        rows = []
+        for (subq, gold, cand), g in zip(batch, gens):
+            v = parse_verdict(g.text)
+            rows.append({"key": vet_key(subq, gold, cand), "subq": subq, "gold": gold, "cand": cand,
+                         **v, "raw": g.text, **meta})
+            cache[rows[-1]["key"]] = v["ok"]
+        append_jsonl(cache_file, rows)
+        print(f"[vet] {i + len(batch)}/{len(todo)} judged; accepted so far "
+              f"{sum(r['ok'] for r in rows)}/{len(rows)} in this batch", flush=True)
+    return cache
+
+
+def cmd_vet(args):
+    """Judge planted-value candidates in rank order, a few per cell per round, until each cell has
+    an accepted candidate or vet_max_per_cell were rejected. Run before `inject`."""
+    cfg = load_config(args.config)
+    if not cfg.vet_values:
+        print("[vet] vet_values is false in this config: nothing to vet")
+        return
+    items, base, elig, off_pool = inject_inputs(cfg)
+    slots = []   # (subq, gold, [first vet_max_per_cell valid candidates in rank order])
+    for e in elig:
+        it = items[e["item_id"]]
+        hops = parse_hops(e["chain_text"])
+        clean_text = e["chain_text"] + "\n" + base[it["id"]]["text"]
+        hop_map = e.get("hop_map") or list(range(it["K"]))
+        for k in range(1, it["K"] + 1):
+            g = hop_map[k - 1]
+            subq, gold = judge_question(it, k, g)
+            for et in ("in_context", "off_context"):
+                gen = valid_candidates(it, k, hops[k - 1].answer, et, clean_text, off_pool, gold_idx=g)
+                cands = [t for t, _ in itertools.islice(gen, cfg.vet_max_per_cell) if t is not None]
+                if cands:
+                    slots.append((subq, gold, cands))
+    judge_cfg = judge_config(cfg)
+    cache = load_cache(vet_cache(judge_cfg))
+    for rnd in itertools.count(1):
+        triples = []
+        for subq, gold, cands in slots:
+            verdicts = [cache.get(vet_key(subq, gold, c)) for c in cands]
+            if any(verdicts):
+                continue
+            new = [c for c, v in zip(cands, verdicts) if v is None][:cfg.vet_per_round]
+            triples += [(subq, gold, c) for c in new]
+        if not triples:
+            break
+        print(f"[vet] round {rnd}: {len(triples)} candidates", flush=True)
+        cache = run_judge(judge_cfg, triples)
+    n_ok = sum(any(cache.get(vet_key(s, g, c)) for c in cands) for s, g, cands in slots)
+    print(f"[vet] {cfg.run_name}: {n_ok}/{len(slots)} cells have an accepted value "
+          f"({len(slots) - n_ok} will be dropped as vet_rejected)")
+
+
 # ---------------------------------------------------------------- inject
 
 def cmd_inject(args):
     """Build every cell for every eligible item (doc §6.3); log dropped cells with reasons."""
     cfg = load_config(args.config)
-    items = {it["id"]: it for it in run_items(cfg)}
-    base = {r["item_id"]: r for r in read_jsonl(cfg.run_dir / "baseline.jsonl") if r["condition"] == "baseline"}
-    elig = [r for r in read_jsonl(cfg.run_dir / "eligibility.jsonl") if r["eligible"]]
-    off_pool = build_off_pool(data.load_items(["dev", "train"], [3, 4]))   # big pool, all prepared items
+    items, base, elig, off_pool = inject_inputs(cfg)
+    vetted = None
+    if cfg.vet_values:
+        vetted = load_cache(vet_cache(judge_config(cfg)))
+        if not vetted:
+            sys.exit(f"vet_values is on but {vet_cache(judge_config(cfg))} is empty: run `vet` first")
     cells, dropped = [], []
     for e in elig:
         it = items[e["item_id"]]
@@ -307,7 +401,8 @@ def cmd_inject(args):
             cells.append({**common, **pos, "condition": "clean", "error_type": None,
                           "prefix": prefix_fn(), "new_value": None})
             for et in ("in_context", "off_context"):
-                value, reason, n_cand = pick_value(it, k, hops[k - 1].answer, et, clean_text, off_pool, gold_idx=g)
+                value, reason, n_cand = pick_value(it, k, hops[k - 1].answer, et, clean_text, off_pool, gold_idx=g,
+                                                   vetted=vetted)
                 if value is None:
                     dropped.append({**common, **pos, "condition": "inject", "error_type": et,
                                     "reason": reason, "n_candidates": n_cand})
@@ -321,6 +416,12 @@ def cmd_inject(args):
     for (cond, et, reason), n in Counter((d["condition"], d["error_type"] or "-", d["reason"].split(":")[-1])
                                          for d in dropped).most_common():
         print(f"  dropped {cond:6s} {et:12s} {reason:40s} {n}")
+    # look at what will be planted before spending GPU time on it (the first run skipped this)
+    inj = [c for c in cells if c["condition"] == "inject"]
+    print("random planted values (sub-question | gold -> planted):")
+    for c in random.Random(0).sample(inj, min(15, len(inj))):
+        subq, gold = judge_question(items[c["item_id"]], c["k"], c["gold_hop"] - 1)
+        print(f"  {subq[:70]} | {gold} -> {c['new_value']}  [{c['error_type']}]")
 
 
 # ---------------------------------------------------------------- continue
@@ -335,7 +436,27 @@ def cmd_continue(args):
         prefill = prefill_text(c["prefix"], cfg.think) if c["condition"] != "noprefix" else ""
         c["prompt_ids"] = build_ids(tok, cfg.model_id, user_message(items[c["item_id"]]), cfg.think, prefill)
         c["max_tokens"] = cfg.decoding.max_tokens
-    generate_cells(cfg, cells, cfg.run_dir / "continuations.jsonl", "continue")
+    out = cfg.run_dir / "continuations.jsonl"
+    if cfg.reuse_cells_from and not out.exists():
+        reuse_cells(cfg, cells, out)
+    generate_cells(cfg, cells, out, "continue")
+
+
+def reuse_cells(cfg: Config, cells: list[dict], out) -> None:
+    """Copy noprefix/clean continuations from an earlier run of the same model and mode. A row is
+    reused only if its prompt ids are identical, so it is exactly the generation this run would
+    request (its seed came from the earlier run_name and is kept in the row)."""
+    src = cfg.run_dir.parent / cfg.reuse_cells_from / "continuations.jsonl"
+    old = {cell_key(r): r for r in read_jsonl(src) if r["condition"] in ("noprefix", "clean")}
+    rows = []
+    for c in cells:
+        r = old.get(cell_key(c))
+        if c["condition"] in ("noprefix", "clean") and r and r.get("prefix") == c["prefix"] \
+                and r.get("prompt_len") == len(c["prompt_ids"]):
+            rows.append({**r, "reused_from": cfg.reuse_cells_from})
+    append_jsonl(out, rows)
+    n_want = sum(c["condition"] in ("noprefix", "clean") for c in cells)
+    print(f"[continue] reused {len(rows)}/{n_want} noprefix+clean cells from {src}", flush=True)
 
 
 # ---------------------------------------------------------------- score
@@ -432,6 +553,7 @@ def main(argv=None):
     for name, fn, help_ in [
         ("baseline", cmd_baseline, "own chain + closed-book per item"),
         ("eligible", cmd_eligible, "doc §6.1 eligibility filter"),
+        ("vet", cmd_vet, "LLM judge vets planted-value candidates (before inject)"),
         ("inject", cmd_inject, "build all cells + validity drops"),
         ("continue", cmd_continue, "generate all cells (resumable)"),
         ("score", cmd_score, "EM/F1 + adopted -> scored.jsonl"),

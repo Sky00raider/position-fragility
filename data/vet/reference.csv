@@ -1,0 +1,301 @@
+source,item_id,subq,gold,cand,ref_ok,ref_type_ok,ref_plausible
+audit100,4hop3__152056_698586_1926_54362,who burned down Atlanta in the Civil War,Confederate Gen. John Bell Hood,the Committee of Public Safety,0,0,0
+audit100,3hop1__511157_709625_84283,who is the owner of Warner Bros. Records,Warner Music Group,Columbia Records,1,1,1
+audit100,3hop1__423001_503371_21711,Pedrola >> located in the administrative territorial entity,Aragon,Mexico,0,0,1
+audit100,3hop1__140786_2053_52946,when is celebrity big brother coming to CBS,"February 7, 2018","March 29, 2018",1,1,1
+audit100,3hop1__423001_503371_21711,When was the Palau de la Generalitat in Barcelona constructed?,built in the 15th century,Between 1540 and 1685,1,1,1
+audit100,3hop1__749581_443779_52195,who is the president of newly declared independent country East Timor,Francisco Guterres,Estanislau da Silva,1,1,1
+audit100,3hop2__36852_326964_7713,What city did the Qing lose in 1853?,Nanjing,Tennessee,0,0,0
+audit100,4hop1__151903_5274_458768_33677,Universal Music Group. >> headquarters location,Santa Monica,New York City,1,1,1
+audit100,3hop2__222979_133099_40768,Scion >> owned by,Toyota,Infiniti,1,1,1
+audit100,3hop1__654651_55349_651302,Trey Parker >> place of birth,Denver,Detroit,1,1,1
+audit100,4hop1__707078_765799_282674_759393,Erik Jensen >> place of birth,Appleton,Xintai,1,1,1
+audit100,3hop2__76873_69814_64554,following before and after World War II The Cold War developed between the u.s. and,Union of Soviet Socialist Republics,United Nations Trusteeship Council,0,0,0
+audit100,3hop1__573244_339990_15538,Columbia County >> located in the administrative territorial entity,Oregon,France,0,0,0
+audit100,3hop1__694534_160088_49779,What nationality was Aaron Spelling ?,an American,Republicans,0,0,0
+audit100,3hop1__159802_39743_24526,What is the first state discussed here?,Virginia,Nashville,0,0,0
+audit100,3hop1__140855_2053_52946,What was the original network of Then Came Bronson?,NBC,Better Living TV Theater,0,0,0
+audit100,3hop1__79039_131926_90707,where is the home of the juicy lucy,Minneapolis,Pennsylvania,0,0,1
+audit100,4hop1__94201_642284_131926_13165,What treaty ceded territory to the US extending west to Mississippi River ?,Treaty of Paris,Cayuga County,0,0,0
+audit100,3hop2__855821_467331_162182,In what region of Vietnam is Da Nang located?,South Central Coast,the Afar Region,0,1,0
+audit100,3hop2__132957_133292_40768,Which corporation created Hino Dutro?,Toyota,Acura EL,0,0,0
+audit100,3hop2__565959_223623_162182,John Phan >> place of birth,Da Nang,Australia,0,0,1
+audit100,4hop2__161602_474028_88460_21062,Are there any cruise travel destinations for Myanmar ?,It is not possible for foreigners to go to/from Myanmar by sea or river.,U.K.,0,0,0
+audit100,3hop1__140786_2053_52946,"Along with ABC and NBC , what other major broadcaster is based in New York?",CBS,ABC,0,1,0
+audit100,4hop1__88342_75218_128008_48717,who played in the most after the World Series games,the New York Yankees,UN Security Council,0,0,0
+audit100,3hop1__140855_2053_52946,"Along with ABC and NBC , what other major broadcaster is based in New York?",CBS,Newport News,0,0,0
+audit100,3hop1__251085_831637_91775,USS Grouse >> operator,United States Navy,the Royal Navy,1,1,1
+audit100,3hop1__109113_720914_41132,Who developed Venus with a Mirror?,Titian,European,0,0,0
+audit100,3hop2__222979_132957_40768,Who made Acura Legend?,Honda,Acura EL,0,0,0
+audit100,3hop1__251085_831637_91775,what does seal stand for in U.S. Navy seals,"Sea, Air, and Land",Alanis Morissette,0,0,0
+audit100,3hop2__565959_223623_162182,John Phan >> place of birth,Da Nang,Macao,1,1,1
+audit100,4hop1__152562_5274_458768_33632,What was the record label of Vilaiyaadu Mankatha?,Sony Music Entertainment,Biltmore Records,1,1,1
+audit100,3hop2__90098_156850_10557,where does the last name sylvester come from,from the Latin,Ἀπέλλα,0,0,0
+audit100,4hop1__344155_378185_282674_759393,Appleton >> located in the administrative territorial entity,Outagamie County,the United States,0,0,1
+audit100,3hop2__36852_326964_7713,Yaxing Coach >> headquarters location,Yangzhou,Anzoátegui,0,0,0
+audit100,4hop1__47210_53706_795904_580996,Sacramento >> shares border with,Rio Linda,Forest Acres,1,1,1
+audit100,4hop2__9988_158985_70784_79935,"What prevailed with the disgrace of ""Near East""?","""Middle East""",the Irish Sea,0,0,0
+audit100,3hop1__751782_2053_52946,when is celebrity big brother coming to CBS,"February 7, 2018","November 7, 2017",1,1,1
+audit100,4hop1__88342_75218_128008_48717,Which is the league of the New York Yankees ?,Major League Baseball,Reece Conca,0,0,0
+audit100,3hop2__304722_526346_63959,1894–95 FA Cup >> winner,Aston Villa,Freddie Redd,0,0,0
+audit100,3hop1__768500_730460_70315,Allen Toussaint >> place of birth,New Orleans,Houston,1,1,1
+audit100,4hop1__71715_59747_211319_557671,Montmorency County >> shares border with,Presque Isle County,Tennessee,0,0,0
+audit100,4hop3__387712_132409_146285_35031,Jacoby Shaddix >> member of,Papa Roach,Saint Martin,0,0,0
+audit100,4hop1__324759_765799_282674_759393,Brown County >> capital,Green Bay,Orange Bay,1,1,1
+audit100,4hop1__310029_153080_33897_81096,What city is Charles Mingus from?,Arizona,Tennessee,1,1,1
+audit100,4hop1__88342_75218_128008_87812,Which is the league of the New York Yankees ?,Major League Baseball,Harvard Business School,0,0,0
+audit100,3hop2__222979_133099_40768,Scion >> owned by,Toyota,Amazon,0,1,0
+audit100,3hop1__801799_547811_41132,Antonio Vivaldi >> place of birth,Venice,Joventango,0,0,0
+audit100,4hop1__151903_5274_458768_33677,Which was the record label for The Lost Trident Sessions?,Sony Music Entertainment,MCA Records,1,1,1
+audit100,3hop2__855821_467331_162182,In what region of Vietnam is Da Nang located?,South Central Coast,the Horn of Africa,0,1,0
+audit100,4hop1__606685_508773_85832_745702,Sergio Villanueva >> place of birth,Guadalajara,Cape York,0,0,0
+audit100,4hop2__5206_39078_8987_8974,What The Army was unprepared for the invasion of Czechoslovakia ?,Yugoslavia,Turkmenistan,1,1,1
+audit100,4hop3__129456_29339_508306_70744,In which state is North Point Mall located?,Georgia,Arizona,1,1,1
+audit100,4hop1__343844_17130_70784_61381,what region lies immediately to the north of Middle East and the persian gulf,Kingdom of Saudi Arabia,Doha,0,0,0
+audit100,4hop1__271272_508773_85832_745702,who was the italian navigator sailing for england that explored the eastern coast of North America,John Cabot,John Huston,0,1,0
+audit100,4hop2__161602_474028_88460_86452,what natural boundary lies between Thailand and Laos,Myanmar,Minnesota,0,0,0
+audit100,3hop1__90327_83076_319330,Woodrow Wilson >> child,Jessie Woodrow Wilson,Vance C. McCormick,1,1,1
+audit100,3hop1__511157_709625_84283,who is the owner of Warner Bros. Records,Warner Music Group,the Federal Reserve,0,1,0
+audit100,4hop1__271272_508773_85832_745702,John Cabot >> child,Sebastian Cabot,David Melgueiro,1,1,1
+audit100,3hop2__132957_133292_40768,Who made Acura Legend?,Honda,Nelvana,0,1,0
+audit100,3hop1__79039_131926_90707,where is the home of the juicy lucy,Minneapolis,Belgium,0,0,0
+audit100,3hop1__159802_39743_24526,What is the first state discussed here?,Virginia,Tibet,0,0,0
+audit100,4hop2__9988_158985_70784_79935,Where is the most growth taking place in desalination for agricultural use?,Persian Gulf,New England,0,0,0
+audit100,4hop2__567956_39078_8987_8974,Which military branch helped the Old West's inadequate local police?,The Army,MC Eiht,0,0,0
+audit100,4hop1__9007_698949_157828_239539,Where is the final resting place of Tito?,Belgrade,Thailand,0,0,0
+audit100,4hop1__690653_378185_282674_759393,Appleton >> located in the administrative territorial entity,Outagamie County,Henrico County,1,1,1
+audit100,4hop1__846600_153080_33897_81096,who won the indy car race in Phoenix,Mario Andretti,Steve Sample,1,1,1
+audit100,3hop1__603558_87694_124169,San Pietro in Ciel d'Oro >> named after,Peter,Medici Madonna,0,0,0
+audit100,4hop1__512794_508773_85832_745702,Guadalajara >> continent,North America,the Arafura Sea,0,0,0
+audit100,3hop1__145290_443779_52195,who is the president of newly declared independent country East Timor,Francisco Guterres,Haider al - Abadi,0,1,0
+audit100,3hop1__210639_147339_51423,what is the name of the castle in Toronto,Casa Loma,Turner,0,0,0
+audit100,4hop1__473563_309800_355213_203322,Cleveland >> located in the administrative territorial entity,Rowan County,United States,0,0,1
+audit100,4hop3__387712_132409_146285_35031,Jacoby Shaddix >> member of,Papa Roach,Valencia,1,1,1
+audit100,4hop3__152056_698586_1926_54362,who burned down Atlanta in the Civil War,Confederate Gen. John Bell Hood,CBS,0,0,0
+audit100,3hop1__694534_160088_49779,What nationality was Aaron Spelling ?,an American,Australian,1,1,1
+audit100,4hop1__9007_698949_157828_239539,Serbian is the co-official language of what country?,Kosovo,Miami,0,0,0
+audit100,4hop2__5206_39078_8987_8974,Yugoslavia was the only communist country to have an embassy where?,Alfredo Stroessner's Paraguay,the Committee of Public Safety,0,0,0
+audit100,4hop1__802394_153080_33897_81096,who won the indy car race in Phoenix,Mario Andretti,Donald Trump,0,1,0
+audit100,3hop1__801799_547811_41132,Antonio Vivaldi >> place of birth,Venice,Bangkok,1,1,1
+audit100,4hop3__129456_29339_508306_70744,who has more national championships Clemson or South Carolina,University of South Carolina,Black Hills National Cemetery,0,0,0
+audit100,4hop1__118068_582428_157828_162309,"Aleksandar Petrović >> languages spoken, written or signed",Serbian,French,1,1,1
+audit100,3hop2__76873_69814_64554,following before and after World War II The Cold War developed between the u.s. and,Union of Soviet Socialist Republics,Lightspeed & Quantum Studio,0,0,0
+audit100,3hop1__573244_339990_15538,Columbia County >> located in the administrative territorial entity,Oregon,Manitoba,1,1,1
+audit100,4hop1__94201_642284_131926_13165,The designer for Southeast Library was?,Ralph Rapson,Dwight D. Eisenhower,0,1,0
+audit100,4hop3__160230_470287_345497_72134,what was the title of the various Latin Mother goddess?,alma mater,the Karmapa,1,1,1
+audit100,3hop2__90098_156850_10557,where does the last name sylvester come from,from the Latin,White Americans,0,0,0
+audit100,3hop1__632623_160713_77246,what is the meaning of Hindu in arabic dictionary,the country of India,British Empire,1,1,1
+audit100,3hop2__222979_132957_40768,"When did Honda , Toyota and Nissan open US assembly plants?",1981,1920,0,1,0
+audit100,4hop1__344155_765799_282674_759393,Appleton >> capital of,Outagamie County,New Haven County,1,1,1
+audit100,4hop1__802394_153080_33897_81096,What is the largest populated city in Arizona ?,Phoenix,Texas,0,0,0
+audit100,4hop2__567956_39078_8987_8974,Which military branch helped the Old West's inadequate local police?,The Army,SACP,0,0,0
+audit100,3hop1__109113_720914_41132,How many times did plague occur in Venice ?,22,17.7,0,1,0
+audit100,4hop1__606685_508773_85832_745702,who was the italian navigator sailing for england that explored the eastern coast of North America,John Cabot,Robin Hood,0,1,0
+audit100,4hop1__310029_153080_33897_81096,What city is Charles Mingus from?,Arizona,Indiana,1,1,1
+audit100,3hop1__768500_730460_70315,where did katrina hit the hardest in New Orleans,the city of New Orleans,the British Empire,0,0,0
+audit100,4hop1__47210_53706_795904_580996,Samuel Brannan >> work location,Sacramento,Dahongliutan,1,1,1
+audit100,4hop1__56226_32392_823060_610794,Forest Acres >> located in the administrative territorial entity,Richland County,Baltimore County,1,1,1
+audit100,4hop1__343844_17130_70784_61381,Where is Israel located?,Middle East,New England,0,1,0
+audit100,3hop1__632623_160713_77246,what is the meaning of Hindu in arabic dictionary,the country of India,West Lancashire,0,0,0
+audit100,4hop1__473563_309800_355213_203322,Let the Good Times Roll >> director,Robert Abel,Carlo Vanzina,1,1,1
+audit100,4hop2__161602_474028_88460_86452,Who hosted the tournament?,Thailand,France,1,1,1
+sample200,3hop1__157791_56750_1891,In what state did the writer die?,New York,the UK,0,0,0
+sample200,3hop1__105813_62641_75534,What country did Mapado originate?,South Korea,East Germany,0,1,0
+sample200,3hop1__30240_740597_41132,Who once used the spice route that the Ottoman Empire controlled?,Marco Polo,Cornelis de Houtman,1,1,1
+sample200,3hop1__16759_56765_148411,minister to Britain who negotiated a treaty in 1795,John Jay,Lady Gaga,0,1,0
+sample200,3hop1__30240_740597_41132,Marco Polo >> place of birth,Venice,France,0,0,0
+sample200,3hop1__852952_147364_40232,Where did Rin Tin Tin live when he died?,Los Angeles,Mexico City,1,1,1
+sample200,3hop1__312602_629330_76998,Tikhaya Sosna >> mouth of the watercourse,Don,Charles Young,0,0,0
+sample200,3hop1__131452_587553_527472,Which state is KJRZ-LP located?,Montana,Israel,0,0,0
+sample200,3hop1__75023_58494_1860,who is captain miller in saving private ryan,Tom Hanks,Ben Carson,0,1,0
+sample200,3hop1__321720_650651_7262,The Biggest Loser Brunei (season 3): The Final Chance >> creator,NBC,UEFA Champions League,0,0,0
+sample200,3hop1__159612_22372_8111,Where is the League of Nations located?,Switzerland,Belgrade,0,0,0
+sample200,3hop1__146600_728452_124684,In what place did Richard Ermisch die?,Berlin,Zhejiang,0,0,0
+sample200,3hop1__260450_533132_1660,The Visit >> lyrics by,Fred Ebb,Al Green,1,1,1
+sample200,3hop1__782226_106876_80004,National Rail >> follows,British Rail,German Army,0,0,0
+sample200,3hop1__647048_284171_771594,Kuwait >> creator,Nabil Kanso,Julius Peppers,0,1,0
+sample200,3hop1__20597_84298_53741,who ruled France during the reign of terror,the Committee of Public Safety,Financial Conduct Authority,0,0,0
+sample200,3hop1__8294_15324_35370,In what city was Elizabeth I born?,London,Hamburg,1,1,1
+sample200,3hop1__84887_538202_84283,who sings i just got started lovin you,James Otto,Jewel Akens,1,1,1
+sample200,3hop1__621442_544708_33164,John Milton >> country of citizenship,England,Honda,0,0,0
+sample200,3hop1__694534_160088_73916,MacGruder and Loud >> creator,Aaron Spelling,Alexander Calder,0,1,0
+sample200,3hop1__11207_210788_52135,"Which Indian monument, inspired by the Arc de Triomphe, was built in 1931?",The India Gate,Cundinamarca,0,0,0
+sample200,3hop1__135437_804098_23923,What is Danalite named after?,James Dwight Dana,Charles Pillsbury,1,1,1
+sample200,3hop1__32903_103178_84074,Who was able to describe the process of evaporation?,Wang Chong,Annie Besant,1,1,1
+sample200,3hop1__56041_153005_3684,what is the next national geographic genius series,Mary Shelley,Phil Murphy,0,1,0
+sample200,3hop1__446791_100761_93284,São Lourenço River >> mouth of the watercourse,Paraguay River,Hai River,1,1,1
+sample200,3hop1__52717_597383_59330,McFadden & Whitehead >> location of formation,Philadelphia,Union Army,0,0,0
+sample200,3hop1__140994_2053_52946,"Which channel broadcast Hello, Larry?",NBC,New York Giants Radio Network,0,0,0
+sample200,3hop1__295682_164954_75527,Ridgway B. Knight >> educated at,Harvard Business School,Deninu School,0,1,0
+sample200,3hop1__174833_650651_7262,The Biggest Loser Brunei (season 3): The Final Chance >> creator,NBC,NCAA Division I Women's Basketball Tournament,0,0,0
+sample200,3hop1__729997_684406_72045,Last Chants for a Slow Dance >> screenwriter,Jon Jost,Kenneth Bi,1,1,1
+sample200,3hop1__232823_810457_285920,Carol Summers >> place of birth,Kingston,Christian County,0,0,1
+sample200,3hop1__688608_490280_41375,Andrew Bujalski >> educated at,Harvard,University of Vienna,1,1,1
+sample200,3hop1__232823_810457_285920,Kingston >> located in the administrative territorial entity,Ulster County,the Timor Sea,0,0,0
+sample200,3hop1__620731_836933_77861,Larry Fessenden >> place of birth,New York City,Orange County,0,0,0
+sample200,3hop1__1266_41881_8111,The Rhine forms the border between Austria. and what other country?,Switzerland,Zhejiang,0,0,0
+sample200,3hop1__671542_665330_47686,Darlings >> performer,Kevin Drew,Chaka Khan,1,1,1
+sample200,3hop1__161136_93626_77826,where did the allies go after North Africa,Italy,Zurich,0,0,0
+sample200,3hop1__91230_517267_451901,where does christina yang go in season 9,Minnesota,Tatra County,0,0,0
+sample200,3hop1__15161_728452_124684,In what city was uranium discovered?,Berlin,Nanjing,0,1,0
+sample200,3hop1__136578_5960_52356,What part of the United Kingdom is Belfast located in?,Northern Ireland,West Lancashire,0,0,0
+sample200,3hop1__450971_104782_696050,Which country's citizenship does Antoine Bourdelle hold?,France,Turkey,1,1,1
+sample200,3hop1__858308_102146_53999,Of which country is Ivor Cutler a citizen?,Scotland,Kunming,0,0,0
+sample200,3hop1__408554_266275_33913,National Action Party >> country,Mexico,Burgos,0,0,0
+sample200,3hop1__215607_832324_795274,Wyandotte Caves >> located in the administrative territorial entity,Indiana,Canberra,0,0,0
+sample200,3hop1__360282_544708_8723,Doctrine and Discipline of Divorce >> author,John Milton,Oskar Maria Graf,1,1,1
+sample200,3hop1__337717_703625_126073,"Love All the People: Letters, Lyrics, Routines >> author",Bill Hicks,Trippie Redd,1,1,1
+sample200,3hop1__49391_1955_90328,"Of all the countries in South America , which provided the most legal immigrants in 2013?",Ecuador,Nevada,0,0,0
+sample200,3hop1__4264_92106_59695,What land is near the worms' first known location?,the Galapagos Islands,Falkland Islands,1,1,1
+sample200,3hop1__437094_174253_88270,"Embassy of Colombia, Quito >> country",Ecuador,London,0,0,0
+sample200,3hop1__389069_132457_51423,What city was Danko Jones formed in?,Toronto,Second Republic,0,0,0
+sample200,3hop1__161136_93626_77826,Where was the screening prevented?,North Africa,Britain,0,0,1
+sample200,3hop1__254856_400692_51423,Serena Ryder >> place of birth,Toronto,Quinwood,1,1,1
+sample200,3hop1__529164_567566_84283,Christopher Cross >> record label,Warner Bros. Records,Something Personal,0,0,0
+sample200,3hop1__33102_42691_217606,Where did Lilienfeld file his patent?,Canada,Zurich,0,0,0
+sample200,3hop1__161080_158722_93820,Where do they travel to?,Scotland,New Zealand,1,1,1
+sample200,3hop1__374907_183029_831331,Clermont County >> shares border with,Hamilton County,Latvia,0,0,0
+sample200,3hop1__592131_593059_76293,Henry Threadgill >> place of birth,Chicago,Celina,1,1,1
+sample200,3hop1__228_237521_291682,Michael Jackson : The Life of an Icon >> cast member,David Gest,Rin Tin Tin,0,0,0
+sample200,3hop1__88885_229859_5303,Pure Prairie League >> record label,RCA Records,EmArcy Records,1,1,1
+sample200,3hop1__1266_41881_22389,The Rhine forms the border between Austria. and what other country?,Switzerland,Hiroshima,0,0,0
+sample200,3hop1__181100_840421_158704,Ted Hughes >> country of citizenship,England,Ghana,1,1,1
+sample200,3hop1__108542_305746_691523,What artist was responsible for the creation of Self-Portrait with Thorn Necklace and Hummingbird?,Frida Kahlo,Andy Warhol,1,1,1
+sample200,3hop1__450971_104782_14771,Monument aux Morts de Montauban >> creator,Antoine Bourdelle,Mohammed Saeed Harib,1,1,1
+sample200,3hop1__745177_413112_579740,Jacinto >> located in the administrative territorial entity,Glenn County,Scott County,1,1,1
+sample200,3hop1__565867_104020_78265,I Love America >> performer,Patrick Juvet,Barbara Rosene,1,1,1
+sample200,3hop1__310233_534205_21115,Mi Buenos Aires querido >> director,Julio Irigoyen,Carlo Vanzina,1,1,1
+sample200,3hop1__823336_228453_10972,Sazerac Company >> headquarters location,New Orleans,New York City,1,1,1
+sample200,3hop1__487301_443779_52195,Indonesia –Timor Leste Commission of Truth and Friendship >> country,East Timor,South Africa,1,1,1
+sample200,3hop1__33286_22372_22347,What institution was meant to bring stability?,the League of Nations,The Großer Plöner See,0,0,0
+sample200,3hop1__601780_183029_831331,Jackson Township >> located in the administrative territorial entity,Clermont County,San Diego,0,0,0
+sample200,3hop1__139773_88110_21193,Where can you find the show The Rachel Maddow Show?,MSNBC,Sonora,0,0,0
+sample200,3hop1__434518_136629_85446,Asaish >> country,Iraq,Sweden,1,1,1
+sample200,3hop1__129972_587553_527472,Mount Henry (Montana ) >> part of,Lewis Range,Nehalem River,0,0,0
+sample200,3hop1__343065_20680_21115,Which country besides Britain claims Falkland Islands ?,Argentina,Russia,1,1,1
+sample200,3hop1__74698_99741_54366,What continent is Libya located on?,Africa,Germany,0,0,0
+sample200,3hop1__28841_547811_80702,Antonio Vivaldi >> place of birth,Venice,Quito,1,1,1
+sample200,3hop1__32903_103178_89263,Who was able to describe the process of evaporation?,Wang Chong,Edward VIII,0,1,0
+sample200,3hop1__72524_797479_81829,Chaka Khan >> place of birth,Chicago,Illinois,0,0,0
+sample200,3hop1__161136_93626_77826,Where was the screening prevented?,North Africa,Louisville,0,0,0
+sample200,3hop1__145876_728452_124684,The Wall – Live in Berlin >> cast member,Roger Waters,Gentile Tondino,1,1,1
+sample200,3hop1__107997_144910_3684,What is the place of birth of Ian Fleming ?,London,Atlanta,1,1,1
+sample200,3hop1__145944_548096_527472,In what city did Donald McIntosh die?,Montana,Spain,0,0,0
+sample200,3hop1__93271_1955_73755,where does stevia in the raw come from,South America,the Middle East,0,0,0
+sample200,3hop1__1266_41881_22389,The Rhine forms the border between Austria. and what other country?,Switzerland,Namibia,0,1,0
+sample200,3hop1__3152_3356_24622,What state is American Idol contestant Chris Daughtry from?,North Carolina,the United Kingdom,0,0,0
+sample200,3hop1__296445_691163_39762,William Selden >> place of birth,Henrico County,Jackson County,1,1,1
+sample200,3hop1__33286_22372_8206,What institution was meant to bring stability?,the League of Nations,Footballer Jared Borgetti,0,0,0
+sample200,3hop1__181667_504655_33913,Julieta Venegas >> country of citizenship,Mexico,MC Eiht,0,0,0
+sample200,3hop1__238983_403313_172215,Wallonia >> continent,Europe,Marne Valley,0,0,0
+sample200,3hop1__639955_834494_34099,Helvetia >> located in the administrative territorial entity,Pima County,Grant County,1,1,1
+sample200,3hop1__83954_482320_255237,where was be careful what you wish for filmed,North Carolina,Russian Empire,0,0,0
+sample200,3hop1__382240_434040_66442,Northtown >> performer,Shamir,Alisa,1,1,1
+sample200,3hop1__70145_229859_5303,Pure Prairie League >> record label,RCA Records,EmArcy Records,1,1,1
+sample200,3hop1__226638_538202_84283,James Otto >> record label,Warner Bros. Records,EmArcy Records,1,1,1
+sample200,3hop1__747740_295863_534758,Lackawanna County >> shares border with,Monroe County,Barry County,1,1,1
+sample200,3hop1__658182_587553_527472,Mount Henry (Montana ) >> part of,Lewis Range,Mediterranean,0,0,0
+sample200,3hop1__621181_104557_86736,Which country was Patricia Conroy in?,Canada,Houston,0,0,0
+sample200,3hop1__86658_748648_369731,Martin Esslin >> employer,BBC,Kneebone,0,0,0
+sample200,3hop1__53235_57802_311656,who became leader of Russia * after the collapse of the soviet union,Boris Yeltsin,Charles Bonesteel,0,1,0
+sample200,3hop1__395248_534205_21115,Julio Irigoyen >> country of citizenship,Argentina,Austria,1,1,1
+sample200,3hop1__482318_729377_238895,Farewell My Friend >> performer,Dennis Wilson,Barry Harris,1,1,1
+sample200,3hop1__72524_797479_81829,who sang the original i'm every woman,Chaka Khan,Jumeirah Al Khor,0,0,0
+sample200,3hop1__106326_81195_59314,What country released Plumíferos?,Argentina,United States,1,1,1
+sample200,3hop1__145427_106426_77199,Which was the country for The Longest Night in Shanghai ?,Japan,France,1,1,1
+sample200,3hop1__382240_434040_66442,Northtown >> performer,Shamir,Tunica,0,0,0
+sample200,3hop1__77966_91191_156667,what is the most common religion in lebanon,Islam,BLUE,0,0,0
+sample200,3hop1__115784_314101_85185,Who developed Isokon Long Chair?,Marcel Breuer,Frida Kahlo,0,1,0
+sample200,3hop1__230823_104557_86736,Which country was Patricia Conroy in?,Canada,Turkey,1,1,1
+sample200,3hop1__68160_83359_90453,who invented the first satellite in the world,the Soviet Union,Knox County,0,0,0
+sample200,3hop1__622497_160088_85460,What nationality was Aaron Spelling ?,an American,Chinese,1,1,1
+sample200,3hop1__84483_77757_384713,who is the biggest owner of us debt,China,Brazil,1,1,1
+sample200,3hop1__183164_643936_36283,Middelburg >> country,South Africa,Netherlands,1,1,1
+sample200,3hop1__299857_69818_38853,Manuel John Johnson >> place of birth,Macao,Spain,0,0,0
+sample200,3hop1__618734_840421_41097,Remains of Elmet >> author,Ted Hughes,Damon Knight,1,1,1
+sample200,3hop1__516535_834494_34109,Allen >> located in the administrative territorial entity,Pima County,Australia,0,0,0
+sample200,3hop1__204631_631365_53191,George Bernard Shaw >> country of citizenship,Ireland,Paris,0,0,0
+sample200,3hop1__50525_83359_90453,who did the us beat in the miracle on ice,the Soviet Union,Kuala Lumpur,0,0,0
+sample200,3hop1__450185_102686_533791,What country is Ivan Puni from?,Russia,Brazil,1,1,1
+sample200,3hop1__130739_587553_527472,What state is KOFI located?,Montana,Oregon,1,1,1
+sample200,3hop1__8294_15324_49352,Who ejected the Benedictines again in 1559?,Elizabeth I,Sami Brady,0,1,0
+sample200,3hop1__293591_183029_405676,Union Township >> located in the administrative territorial entity,Clermont County,Tatra County,0,1,0
+sample200,3hop1__480375_709625_84283,Please Remember Me >> performer,Rodney Crowell,Jane Siberry,1,1,1
+sample200,3hop1__826709_810457_285920,Kingston >> located in the administrative territorial entity,Ulster County,Ethiopia,0,0,0
+sample200,3hop1__121331_164954_56516,Harvard Business School >> located in the administrative territorial entity,Massachusetts,the United States Census Bureau,0,0,0
+sample200,3hop1__285585_538202_84283,James Otto >> record label,Warner Bros. Records,EmArcy Records,1,1,1
+sample200,3hop1__519595_770122_725834,WUFL >> licensed to broadcast to,Sterling Heights,The Republic of Užice,0,0,0
+sample200,3hop1__766938_159891_78184,Where is Washington University in St Louis located?,Missouri,Belgrade,0,0,0
+sample200,3hop1__231402_783837_87543,Sajida Talfah >> place of birth,Iraq,Canada,1,1,1
+sample200,3hop1__4017_671787_54366,Kouilou-Niari River >> continent,Africa,Kaoping River,0,0,0
+sample200,3hop1__9998_93626_77826,How does WINEP bundle the countries of Northwest Africa?,"under ""North Africa.""",the Middle East,1,1,1
+sample200,3hop1__178435_547811_41132,Gloria in D Major >> composer,Antonio Vivaldi,Antonín Kraft,1,1,1
+sample200,3hop1__400877_252578_158704,Chloridia >> author,Ben Jonson,Damon Knight,1,1,1
+sample200,3hop1__630162_632690_39849,Henrico County >> contains administrative territorial entity,Richmond,Belle Fourche,1,1,1
+sample200,3hop1__826709_810457_285920,Kingston >> located in the administrative territorial entity,Ulster County,Glenn County,1,1,1
+sample200,3hop1__287390_555629_70752,Daniel Alfredson >> place of birth,Stockholm,Oceania,0,0,0
+sample200,3hop1__667316_145054_72045,Hands Without Shadows 2 – Voices >> performer,Michael Angelo Batio,Strawberry Alarm Clock,0,0,1
+sample200,3hop1__816887_127905_80286,What league was Cleveland Indians ?,Major League Baseball,the Green Bay Packers,0,0,0
+sample200,3hop1__159612_22372_78265,Who intervened with mediation for the governments?,the League of Nations,European Union,1,1,1
+sample200,3hop1__820301_720914_41132,Titian >> place of death,Venice,Rome,1,1,1
+sample200,3hop1__20121_42691_217606,the island that Canada and denmark fight over,Hans Island,Sarangani Bay,0,0,0
+sample200,3hop1__858730_386977_851569,MC Eiht >> place of birth,Compton,Biysky District,0,0,0
+sample200,3hop1__522518_132413_16121,What city was Pearl Jam formed in?,Seattle,San Jose,1,1,1
+sample200,3hop1__8294_15324_49352,In what city was Elizabeth I born?,London,Canada,0,0,0
+sample200,3hop1__136016_87694_124169,st. Peter ’s basilica the head of the catholic religion is located in,Vatican City,California,0,0,0
+sample200,3hop1__771325_102146_53999,Velvet Donkey >> performer,Ivor Cutler,David Wise,1,1,1
+sample200,3hop1__545624_2053_52946,Here and Now >> original broadcaster,NBC,NHL,0,0,0
+sample200,3hop1__313260_633553_126073,Boss Life >> performer,Slim Thug,Mal Waldron,1,1,1
+sample200,3hop1__93198_841757_11974,Jewel Akens >> place of birth,Houston,Ontario,0,0,0
+sample200,3hop1__398232_326948_78782,Ernie K-Doe >> place of birth,New Orleans,Kuala Lumpur,1,1,1
+sample200,3hop1__858131_676131_159432,Veronica >> performer,Elvis Costello,Roland Barthes,0,1,0
+sample200,3hop1__129972_587553_527472,What is the name of the state where Harrison Glacier is located?,Montana,Washington,1,1,1
+sample200,3hop1__475407_84467_86976,Athletics at the 1904 Summer Olympics >> located in the administrative territorial entity,St Louis,Switzerland,0,0,0
+sample200,3hop1__852952_147364_40232,Rough Waters >> cast member,Rin Tin Tin,Nancy Shanawdithit,0,0,0
+sample200,3hop1__273571_834494_34109,Summit >> located in the administrative territorial entity,Pima County,Barry County,1,1,1
+sample200,3hop1__522518_132413_16121,In Hiding >> performer,Pearl Jam,Ridge,0,0,0
+sample200,3hop1__280834_547811_80702,Bajazet >> composer,Antonio Vivaldi,Michael Jackson,0,1,0
+sample200,3hop1__387338_610398_130836,Western Carolina University >> located in the administrative territorial entity,North Carolina,United States,0,0,0
+sample200,3hop1__489233_629230_7014,The House I Live In >> producer,Frank Ross,Zakariya,1,1,1
+sample200,3hop1__628275_196807_760519,Brockton >> located in the administrative territorial entity,Plymouth County,Latvia,0,0,0
+sample200,3hop1__3152_3356_45305,What state is American Idol contestant Chris Daughtry from?,North Carolina,Wake County,0,0,0
+sample200,3hop1__382240_434040_93752,Shamir >> place of birth,Las Vegas,Washington,1,1,1
+sample200,3hop1__103777_81195_67444,Where was Hernán Gumy from?,Argentina,Vilcanota,0,0,0
+sample200,3hop1__383328_705261_126049,Johann Strauss II >> country of citizenship,Austria,Russia,1,1,1
+sample200,3hop1__22527_146265_24622,In what city did Zebulon Baird Vance die?,North Carolina,South Carolina,1,1,1
+sample200,3hop1__276532_428297_590551,Spotsylvania County >> shares border with,Culpeper County,Baranya County,0,1,0
+sample200,3hop1__276051_4016_83854,Patrick Apataki >> place of birth,Kinshasa,Scotland,0,0,0
+sample200,3hop1__22527_146265_24602,Who was the governor during the Civil War?,Zebulon Baird Vance,William Hale Thompson,1,1,1
+sample200,3hop1__10543_56765_148411,minister to Britain who negotiated a treaty in 1795,John Jay,Bekim Çollaku,0,1,0
+sample200,3hop1__671542_665330_51423,Darlings >> performer,Kevin Drew,Demon Hunter,0,0,1
+sample200,3hop1__357424_308690_708662,An Oxford University Chest >> author,John Betjeman,Jimmy Driftwood,1,1,1
+sample200,3hop1__566317_578030_41391,James Glisson >> place of birth,Jackson County,Orange County,1,1,1
+sample200,3hop1__68160_83359_90453,who invented the first satellite in the world,the Soviet Union,Washington,0,0,0
+sample200,3hop1__337919_841757_126073,The Birds and the Bees >> performer,Jewel Akens,Bee Movie,0,0,0
+sample200,3hop1__141138_2053_52946,Who broadcasted The Chisholms?,NBC,Taxi Orange,0,0,0
+sample200,3hop1__320697_547811_41132,Antonio Vivaldi >> place of birth,Venice,Xiamen,1,1,1
+sample200,3hop1__178435_547811_41132,Antonio Vivaldi >> place of birth,Venice,Turkey,0,0,0
+sample200,3hop1__835094_770122_725834,Tory Rocca >> place of birth,Sterling Heights,Bandundu Province,0,0,0
+sample200,3hop1__178435_547811_41132,Gloria in D Major >> composer,Antonio Vivaldi,Paul Gross,0,1,0
+sample200,3hop1__92251_34179_23375,who was the leader of the bolsheviks in 1917 during the november revolution,Vladimir Lenin,Rothschild,0,1,0
+sample200,3hop1__296445_691163_39762,William Selden >> place of birth,Henrico County,Liberia,0,0,0
+sample200,3hop1__288125_233976_24086,West Haven >> shares border with,New Haven,Ohio County,0,0,0
+sample200,3hop1__161784_728452_124684,The Wall – Live in Berlin >> cast member,Roger Waters,Maly Delschaft,1,1,1
+sample200,3hop1__473969_23998_24055,What entity serves as the largest employer in New Haven ?,Yale,Banco de Portugal,0,0,0
+sample200,3hop1__33286_22372_22347,Where is the League of Nations located?,Switzerland,Trinidad,0,1,0
+sample200,3hop1__131044_74386_516763,who was the president when Alaska was purchased,Andrew Johnson,Abu Musa Ashaari,0,1,0
+sample200,3hop1__257997_104557_86736,Which country was Patricia Conroy in?,Canada,India,1,1,1
+sample200,3hop1__797401_479775_779156,Sinclair Broadcast Group >> headquarters location,Hunt Valley,Minneapolis,1,1,1
+sample200,3hop1__337919_841757_11974,Jewel Akens >> place of birth,Houston,America,0,0,0
+sample200,3hop1__70145_229859_5303,who sang amy what you gonna do,Pure Prairie League,McFadden & Whitehead,1,1,1
+sample200,3hop1__159600_48408_37038,what is the largest religious group in United States,Christians,White Americans,0,0,0
+sample200,3hop1__424334_280480_194644,Corsicana Township >> located in the administrative territorial entity,Barry County,Howard County,1,1,1
+sample200,3hop1__357890_183029_831331,Clermont County >> shares border with,Hamilton County,Monroe County,1,1,1
+sample200,3hop1__85623_375215_67119,Richard Leigh >> place of birth,New Jersey,Ludwigsburg,0,0,0
+sample200,3hop1__20597_84298_53741,who ruled France during the reign of terror,the Committee of Public Safety,Ancient Rome,0,0,0
+sample200,3hop1__5586_374149_43340,Which oblast was broken up in 1943?,Karachay Autonomous Oblast,Lawrence Hilton - Jacobs,0,0,0
+sample200,3hop1__842076_508834_145463,Carl Nielsen >> spouse,Anne Marie Carl-Nielsen,Adalbert Gyrowetz,0,1,0
+sample200,3hop1__95131_434582_60108,Elliott Smith >> place of death,Los Angeles,New Haven,1,1,1
+sample200,3hop1__262651_365698_39762,Charles Oakley >> educated at,Virginia Union University,Far Eastern University,1,1,1
+sample200,3hop1__467932_852454_26118,Mike Binder >> place of birth,Detroit,Hunter Industries,0,0,0
+sample200,3hop1__518381_709625_84283,Lovin' All Night >> performer,Rodney Crowell,Clifford Jordan,1,1,1

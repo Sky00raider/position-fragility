@@ -4,9 +4,21 @@ Last updated: 2026-10-24 (Sat), after drafting the Results section (think_trace 
 Full decision log with numbers: `docs/HISTORY.md`. Rules: `CLAUDE.md`. Design doc: `docs/design_v2.md`.
 
 ## ⚠ REMIND THE USER FIRST (every session until done)
-Ask the user to check with their friend (GPU box owner) whether the `qwen3_8b_think_trace` overnight run
-happened and to send its run folder. Friend was unavailable on Oct 24. Cutoff: if not back by the
-evening of Oct 26, drop think_trace and use the fallback framing (see below).
+Ask the user to get their friend (GPU box owner) to run the v2 command below; it includes
+think_trace. Friend was unavailable on Oct 24. Experiments close Oct 27: the run must start by the
+night of Oct 26 at the latest. If it can't, submit with v1 + the audit disclosure (paper already
+written that way).
+
+## NEXT GPU RUN (v2 + think_trace in one overnight run; friend's box)
+Ask the friend to run, from the repo root:
+    git pull && bash scripts/overnight.sh qwen3_8b_nothink_v2 qwen3_8b_think_v2 qwen3_8b_think_trace_v2 llama31_8b_nothink_v2
+It first runs the vet gate (~5 min); if the gate FAILS nothing else runs, so check the log
+(`tail -f logs/main_*.log`) after ~10 min and send it here if it says GATE FAILED. Then ~2.5-4 h.
+Result: `main_results_<host>_<stamp>.tar.gz` (v2 runs + runs/analysis_v2 + runs/vet). Copy runs into
+`runs/`, keep the tarball pristine. v1 runs/analysis_main stay untouched (fallback).
+After it arrives: check gate numbers + judge acceptance + drop counts, check think_trace continuation
+length (>110 tokens median), rate ~100 v2 planted values independently (CLAUDE.md rule 12),
+then swap the paper's numbers to v2 (v1 + audit become a methods note / robustness).
 
 ## Deadlines
 Experiments done **Oct 27 2026**, paper submitted **Oct 30 2026** (IEEE conference; 4-person student team).
