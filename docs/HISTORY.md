@@ -193,6 +193,66 @@ Expected eligible: ~350–450 (nothink), ~300 (think). Launched with `scripts/ov
 
 ---
 
+## 2026-10-24 (Sat): main runs finished
+
+### Main run, overnight on the RTX 5070 (commit 7aef5ea) **[setup] [result]**
+22:39 → ~06:00. First launch at 22:30 failed instantly (venv not active); the scripts now activate
+`.venv` themselves. Results: `Research Paper/main_results_archlinux_20261023_2239/` (run folders under
+`home/burr/Documents/position-fragility/runs/`), copied to `position-fragility/runs/`.
+
+| | Qwen3-8B nothink | Qwen3-8B think | Llama-3.1-8B nothink |
+|---|---|---|---|
+| items attempted | 6,727 | 2,180 (600 3-hop + 1,580 4-hop) | 6,727 |
+| final answer correct | 44% | 52% | 36% |
+| closed-book correct (excluded) | 10% | 12% | 7% |
+| K hop lines | 97% | 96% (33% also inside `<think>`) | 95% |
+| baseline truncated | 0% | 3% | 1% |
+| **eligible** | **922 (14%)**: 3-hop 855, 4-hop 67 | **384 (18%)**: 3-hop 167, 4-hop 217 | **564 (8%)**: 3-hop 523, 4-hop 41 |
+| eligible, linear | 3-hop 763, 4-hop 33 | 3-hop 147, 4-hop 154 | 3-hop 438, 4-hop 15 |
+| inject cells (dropped by validity) | 5,413 (253) | 2,565 (173) | 3,289 (177) |
+| noprefix correct | 95% | 84% | 74% |
+| clean twins correct | 97% | 79% | 88% |
+| inject correct (raw) | 41% | 62% | 42% |
+| throughput | 403 tok/s | 547 tok/s | 397 tok/s |
+| wall time | 51 min | 4 h 55 min | ~1 h 10 min |
+
+Nothink eligibility was higher than in pilot 2 (14% vs 6%: pilot n was 50). 4-hop nothink is thin
+(Qwen 33, Llama 15 linear items): 4-hop nothink contrasts are underpowered. **[limit]**
+
+### Clean-twin gate (doc §9: ~90%) **[result] [limit]**
+Qwen nothink passes (96–100% at every hop). **Qwen think fails at intermediate hops** (linear: K=3
+78%/86%, K=4 68%/71%/75%; terminal 100%) and Llama is borderline (K=3: 82%/87%). So resuming
+from a prefix sometimes breaks the run even without an error, especially inside `<think>`.
+Clean-twin conditioning removes those items from RR, but it means think-mode RR is measured on a
+selected subset. Must be stated in the paper.
+
+### Findings (linear items, primary; all-items agree) **[result]**
+`runs/analysis_main/` (bootstrap 2000 reps). RR = recovery given a correct clean twin.
+- **H1 (position) reversed: PSI < 0 everywhere.** Late intermediate errors are recovered *less*
+  than early ones (late-stage fragility, the ASCoT direction, opposite to our hypothesis). Qwen
+  nothink K=3: RR early 0.62 → late 0.48 (in-context), 0.70 → 0.50 (off-context), CIs exclude 0,
+  McNemar p_holm < 1e-4. Qwen think: PSI −0.09 to −0.12, CIs mostly exclude 0, McNemar n.s. after
+  Holm. Llama K=3: −0.09 / −0.13. 4-hop nothink: same sign, wide CIs.
+- **H2 (remaining steps): inconclusive.** Matched-remaining contrasts (same steps left, different
+  absolute position) are ≈0 for Qwen nothink (diffs −0.04 to +0.05, CIs ±0.17 because K=4 n≈32)
+  and mixed for think (−0.10 to +0.04). The regression keeps rel_pos significant with remaining and
+  K in the model (β=−3.67, p=0.023), but VIFs are 87–104, so position and remaining cannot be
+  separated statistically in this design (the doc's caveat). Report as "consistent with remaining
+  steps, not separable".
+- **H3 (terminal step) strongly supported.** Terminal-hop RR: Qwen nothink 0.00–0.02, Llama
+  0.07–0.15, Qwen think 0.60, vs intermediate 0.56–0.64 / 0.60–0.64 / 0.82. Pooling terminal with
+  "late" would hugely inflate late fragility.
+- **H4 (thinking): level yes, shape no.** Thinking raises recovery (mode β=+1.52, p<0.001;
+  intermediate RR ≈0.82 vs ≈0.58) but the rel_pos × mode interaction is n.s. (β=−0.24, p=0.66):
+  the late > early fragility persists with thinking.
+- **H5 (error type) supported, small.** Off-context swaps are recovered more than in-context
+  distractors (β=+0.15, p=0.002; e.g. Qwen nothink K=3 early 0.70 vs 0.62).
+- Item difficulty strongly predicts failure (β=−1.12, p<0.001); Qwen recovers less than Llama
+  (β=−0.35, p<0.001).
+- Adoption: Qwen nothink adopted the planted value in 31% of inject cells (1,688/5,413).
+
+---
+
 ## Paper hooks (quick index)
 
 | Paper section | Use these entries |
