@@ -78,7 +78,7 @@ As of the Oct 24 session they had NOT arrived: `runs/qwen3_8b_think_trace` is on
 - [x] Paper: Abstract, Intro, Related Work, RQs, Limitations, Conclusion drafted (53cf62a). 9 `\tbd`s
       left: authors, repo URL, hand audit (2), think_trace (5). Not compiled yet (Overleaf); ~5.5k words,
       check the venue page limit. Remaining `% VERIFY` in refs.bib: lanham, chen2025, yee venue.
-- [ ] Paper: compile on Overleaf (upload main.tex, refs.bib, figures/), fix layout, trim to page limit;
+- [x] Compiled locally with Tectonic: 8 pages, layout fixed, `paper/main.pdf` (HISTORY). [ ] Trim to page limit (VENUE LIMIT UNKNOWN);
       team fills authors + repo URL; verify remaining refs
 - [x] DONE (200-value version, see HISTORY) OPTIONAL: plausibility check on a random 200–400 planted values
       from Qwen nothink K=3 linear, k=1 vs k=2 (Sonnet subagent rater, same criteria as audit), then PSI

@@ -479,3 +479,13 @@ Merged → `docs/audit/audit_sheet_filled.csv`; `make_audit.py --score`:
 A human confirms v1's planted-value problem, and Sonnet's labels (used for `data/vet/reference.csv`,
 the v2 gate's reference) agree well with a human on type, moderately on plausibility. In the paper:
 Method audit paragraph.
+
+### Paper compiled for the first time (Tectonic 0.15.0, XeTeX) **[paper]**
+2026-10-24. 8 pages (IEEE conference, two-column). Fixed: BibTeX silently dropped lanham/chen2025/yee
+because of `% VERIFY` comments *inside* the entries (now verified on arXiv, comments removed: never put
+% inside a .bib entry); regression formula overflowed its column (split over two lines); long Llama
+model name and yield table overflowed (allowbreak, footnotesize); Fig. 2 shrunk to 0.62\textwidth.
+main.tex now picks fonts by engine (`iftex`): pdfLaTeX/Overleaf unchanged (T1, Times), XeTeX uses TeX
+Gyre Termes, so local and Overleaf page counts should match closely. PDF committed as `paper/main.pdf`.
+Rebuild: download tectonic 0.15.0 (GitHub release, windows-msvc zip), then
+`tectonic --keep-logs --outdir <dir> paper/main.tex`; page count = "Output written ... (N pages" in main.log.

@@ -2,7 +2,14 @@
 % Sections 4 (Method) and 5 (Experimental Setup) are drafted from the code at the commit noted in
 % \codecommit. Everything marked \tbd{...} is filled in after the GPU runs. \todo{...} = open decision.
 \documentclass[conference]{IEEEtran}
-\usepackage[T1]{fontenc}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}   % pdfLaTeX (Overleaf): IEEEtran's Times
+\else
+  \usepackage{fontspec}       % XeTeX (local Tectonic builds): same Times look
+  \setmainfont{texgyretermes}[Extension=.otf, UprightFont=*-regular, BoldFont=*-bold,
+    ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+\fi
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
@@ -175,7 +182,7 @@ with early $k{=}1$ and late $k{=}K{-}1$ ($k{=}2$ for $K{=}3$, $k{=}3$ for $K{=}4
 
 \subsection{Models and inference}
 \textbf{Qwen3-8B}~\cite{qwen3}, 4-bit AWQ~\cite{awq} (\texttt{Qwen/Qwen3-8B-AWQ}, revision \texttt{4da05a8}), run with \texttt{enable\_thinking} off and on. Same weights in both modes, so the comparison isolates the thinking mode.
-\textbf{Llama-3.1-8B-Instruct}~\cite{llama3}, 4-bit AWQ (\texttt{hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4}, revision \texttt{db1f81a}), non-thinking only.
+\textbf{Llama-3.1-8B-Instruct}~\cite{llama3}, 4-bit AWQ (\texttt{hugging-quants/\allowbreak Meta-Llama-3.1-8B-\allowbreak Instruct-AWQ-INT4}, revision \texttt{db1f81a}), non-thinking only.
 Inference uses vLLM~\cite{vllm} 0.32.0 on one RTX 5070 (12\,GB), with an 8{,}192-token context. Each model--mode pair runs on one GPU for all of its conditions.
 
 \begin{table}[t]
@@ -202,7 +209,7 @@ Table~\ref{tab:counts} gives the yield. Non-thinking runs attempt all 6{,}727 th
 \centering
 \caption{Items and cells per model--mode. Linear: 3hop1/4hop1 chains (primary analysis set).}
 \label{tab:counts}
-\small
+\footnotesize
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{lccc}
 \toprule
@@ -229,9 +236,10 @@ All confidence intervals are item-clustered percentile bootstraps (items resampl
 \item matched-remaining contrasts on linear chains (items resampled independently within each $K$);
 \item terminal vs.\ pooled intermediate recovery;
 \item one logistic regression on intermediate inject cells with a correct clean twin,
-\[
-\text{correct} \sim \text{rel\_pos}\times\text{mode} + \text{remaining} + K + \text{error\_type} + \text{difficulty} \,(+\, \text{model}),
-\]
+\begin{align*}
+\text{correct} \sim{} & \text{rel\_pos}\times\text{mode} + \text{remaining} + K \\
+ & + \text{error\_type} + \text{difficulty} \,(+\, \text{model}),
+\end{align*}
 with standard errors clustered by item and variance inflation factors reported, since rel\_pos, remaining and $K$ are partly collinear by construction.
 \end{itemize}
 Primary results use linear chains; all-item results and results excluding truncated runs are reported as robustness checks, since a truncated run counts as wrong and truncation could differ by position. Before the main runs we ran a pilot of 50 dev items per mode and required clean-twin accuracy of about 90\% (lower would mean resumption itself is broken). In the pilot, clean twins were correct in 7/7 non-thinking and 31/32 thinking cells. In the main runs the thinking mode fell below this target (Section~\ref{sec:results}).
@@ -243,7 +251,7 @@ Unless stated otherwise, numbers are for linear chains, $\RR$ is conditioned on 
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.82\textwidth]{figures/recovery_linear.png}
+\includegraphics[width=0.62\textwidth]{figures/recovery_linear.png}
 \caption{Recovery rate by corrupted hop $k$ (linear chains; 95\% item-bootstrap CIs). Hollow markers: terminal hop, analyzed separately. Recovery falls from early to late intermediate hops in every panel and collapses at the terminal hop without thinking.}
 \label{fig:recovery}
 \end{figure*}
