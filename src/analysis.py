@@ -1,4 +1,5 @@
-"""Analysis: recovery tables, PSI, matched-remaining contrasts, McNemar, logistic regression, figures.
+"""Analysis: recovery tables, PSI, matched-remaining contrasts, McNemar, logistic regression, figures,
+explicit vs silent recovery (E1, exploratory) and the shared-item (intersection) robustness check.
 
     python -m src.analysis --runs runs/qwen3_8b_nothink runs/qwen3_8b_think [--out runs/analysis]
 
@@ -6,11 +7,16 @@ Definitions (CLAUDE.md):
   RR(cell)  = P(inject correct | clean twin at the same item and k correct)
   PSI       = RR_late - RR_early on intermediate hops (K=3: k2-k1; K=4: k3-k1). Terminal never pooled.
   Subsets   : "linear" (primary), "all" (robustness), each also "_notrunc" (truncated runs dropped).
+  explicit  = recovered and a doubt marker is in the same or next sentence as the true hop-k value
+              (gold hop answer or the model's own original value) or the planted value; else silent.
+              Rule-based and strict (design doc 8.2): using the right value without a flag is silent.
+  intersection = items eligible in every mode of a model (Qwen3-8B nothink and think).
 CIs are item-clustered bootstrap percentiles (resample items with replacement).
 """
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import warnings
 from pathlib import Path
@@ -19,12 +25,15 @@ import numpy as np
 import pandas as pd
 
 from .config import REPO_ROOT
+from .normalize import normalize
 from .store import read_jsonl
 
 GROUP = ["model", "mode"]
 ERROR_TYPES = ["in_context", "off_context"]
 EARLY_LATE = {3: (1, 2), 4: (1, 3)}            # intermediate early / late hop per K
 MATCHED = [((3, 2), (4, 3), 1), ((3, 1), (4, 2), 2)]   # (K,k) pairs with equal remaining steps
+DOUBT = re.compile(r"\b(wait|actually|mistake|incorrect|re-?check|should be|not correct|correction|however)\b",
+                   re.IGNORECASE)
 
 
 # ---------------------------------------------------------------- loading
@@ -32,7 +41,14 @@ MATCHED = [((3, 2), (4, 3), 1), ((3, 1), (4, 2), 2)]   # (K,k) pairs with equal 
 def load_runs(run_dirs: list[str]) -> pd.DataFrame:
     rows = []
     for d in run_dirs:
-        rows += read_jsonl(Path(d) / "scored.jsonl")
+        run_rows = read_jsonl(Path(d) / "scored.jsonl")
+        elig = Path(d) / "eligibility.jsonl"
+        if elig.exists():   # gold answer of the corrupted hop (gold_hop is 1-based)
+            gold_hops = {e["item_id"]: e["gold_hops"] for e in read_jsonl(elig) if e.get("eligible")}
+            for r in run_rows:
+                hops, gh = gold_hops.get(r["item_id"]), r.get("gold_hop")
+                r["gold_hop_answer"] = hops[gh - 1] if hops and gh else None
+        rows += run_rows
     if not rows:
         sys.exit("no scored.jsonl rows found")
     df = pd.DataFrame(rows)
@@ -225,6 +241,140 @@ def logistic(df) -> tuple[str, pd.DataFrame]:
         fit.summary2().tables[1].reset_index().rename(columns={"index": "term"})
 
 
+# ---------------------------------------------------------------- explicit vs silent recovery (E1)
+
+def sentences(text: str) -> list[str]:
+    """Split on line breaks and sentence-final punctuation (a hop line is one sentence)."""
+    return [t.strip() for t in re.split(r"(?<=[.!?])\s+|\n+", text or "") if t.strip()]
+
+
+def mentions(sentence: str, value) -> bool:
+    v = normalize(value)
+    return bool(v) and f" {v} " in f" {normalize(sentence)} "
+
+
+def flag_in(text: str, values: list) -> bool:
+    """A doubt marker in sentence i and one of the values in sentence i or i+1."""
+    sents = sentences(text)
+    return any(DOUBT.search(s) and any(mentions(t, v) for t in sents[i:i + 2] for v in values)
+               for i, s in enumerate(sents))
+
+
+def split_think(continuation: str, mode: str) -> tuple[str, str]:
+    """(inside <think>, after </think>). Think-mode continuations start inside the think block."""
+    c = continuation or ""
+    if mode != "think":
+        return "", c
+    i = c.find("</think>")
+    return (c, "") if i < 0 else (c[:i], c[i + len("</think>"):])
+
+
+def sc_label(row: dict) -> dict:
+    """Rule-based self-correction label for one inject row: explicit / silent / not_recovered."""
+    values = [row.get("gold_hop_answer"), row.get("orig_value"), row.get("new_value")]
+    think, after = split_think(row.get("continuation"), row.get("mode"))
+    in_think, in_after = flag_in(think, values), flag_in(after, values)
+    label = ("explicit" if in_think or in_after else "silent") if row.get("correct") else "not_recovered"
+    return {"doubt_marker": bool(DOUBT.search(think + "\n" + after)), "flag_think": in_think,
+            "flag_after": in_after, "sc_label": label}
+
+
+def label_sc(df) -> pd.DataFrame:
+    """Recovery rows (clean twin correct) with sc_label, flag_think, flag_after and doubt_marker."""
+    rec = recovery_rows(df)
+    labels = pd.DataFrame([sc_label(r) for r in rec.to_dict("records")], index=rec.index)
+    return rec.drop(columns=[c for c in labels if c in rec]).join(labels)
+
+
+def sc_table(lab, keys) -> pd.DataFrame:
+    """Rates over the RR denominator (explicit_rate + silent_rate = RR) and shares among recovered rows."""
+    out = []
+    for kv, g in lab.groupby(keys):
+        r, f = g[g["correct"]], g[~g["correct"]]
+        out.append({**dict(zip(keys, kv)), "n": len(g), "n_recovered": len(r), "RR": g["correct"].mean(),
+                    "explicit_rate": (g["sc_label"] == "explicit").mean(),
+                    "silent_rate": (g["sc_label"] == "silent").mean(),
+                    "explicit_share": (r["sc_label"] == "explicit").mean() if len(r) else np.nan,
+                    "explicit_in_think_share": r["flag_think"].mean() if len(r) else np.nan,
+                    "explicit_after_think_share": r["flag_after"].mean() if len(r) else np.nan,
+                    "n_not_recovered": len(f),
+                    "doubt_rate_not_recovered": f["doubt_marker"].mean() if len(f) else np.nan,
+                    "doubt_rate_recovered": r["doubt_marker"].mean() if len(r) else np.nan})
+    return pd.DataFrame(out)
+
+
+def sc_examples(lab, path: Path, n=10, seed=0):
+    """n random rows per label, for hand checking."""
+    lines = ["Explicit vs silent recovery: RULE-BASED labels (doubt marker in the same or next sentence as",
+             "the true hop-k value or the planted value). Not validated: check by hand.",
+             f"Doubt regex: {DOUBT.pattern}", ""]
+    for label in ["explicit", "silent"]:
+        g = lab[lab["sc_label"] == label]
+        for _, r in g.sample(min(n, len(g)), random_state=seed).iterrows():
+            after = "after </think>" if r["mode"] == "think" else "in continuation"
+            where = [w for w, f in [("inside <think>", r["flag_think"]), (after, r["flag_after"])] if f]
+            lines += [f"===== {label.upper()}{' (' + ', '.join(where) + ')' if where else ''} | {r['model']} "
+                      f"{r['mode']} | {r['item_id']} K={r['K']} k={r['k']} {r['error_type']}",
+                      f"true hop value: {r.get('gold_hop_answer')!r} (model's own: {r['orig_value']!r}) | "
+                      f"planted: {r['new_value']!r} | pred: {r['pred']!r}",
+                      "--- prefix (last 3 lines)", "\n".join(str(r["prefix"]).rstrip().split("\n")[-3:]),
+                      "--- continuation", str(r["continuation"])[:2500], ""]
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+# ---------------------------------------------------------------- shared items across modes
+
+def intersection(df) -> pd.DataFrame:
+    """Rows of models run in more than one mode, restricted to the items present in every mode."""
+    keep = []
+    for _, g in df.groupby("model"):
+        items = g.groupby("mode")["item_id"].apply(set)
+        if len(items) > 1:
+            keep.append(g[g["item_id"].isin(set.intersection(*items))])
+    return pd.concat(keep) if keep else df.iloc[0:0]
+
+
+def intersection_n_table(df, inter) -> pd.DataFrame:
+    """Eligible items per mode and shared items, per K (all and linear)."""
+    out = []
+    for (model, K), g in df[df["model"].isin(inter["model"].unique())].groupby(["model", "K"]):
+        row = {"model": model, "K": K}
+        for mode, m in g.groupby("mode"):
+            row[f"n_{mode}"] = m["item_id"].nunique()
+            row[f"n_{mode}_linear"] = m.loc[m["is_linear"], "item_id"].nunique()
+        s = inter[(inter["model"] == model) & (inter["K"] == K)]
+        row["n_intersection"] = s["item_id"].nunique()
+        row["n_intersection_linear"] = s.loc[s["is_linear"], "item_id"].nunique()
+        out.append(row)
+    return pd.DataFrame(out)
+
+
+def mode_diff_table(df, reps, rng) -> pd.DataFrame:
+    """RR(think) - RR(nothink) on paired cells (item, k, error type) whose clean twin is correct in both
+    modes, per cell and pooled over intermediate / terminal hops."""
+    rec, out = recovery_rows(df), []
+    for model, g in rec.groupby("model"):
+        if set(g["mode"]) != {"nothink", "think"}:
+            continue
+        p = g.pivot_table(index=["item_id", "K", "k", "error_type", "is_terminal"], columns="mode",
+                          values="correct", aggfunc="first").dropna().reset_index()
+        p["nothink"], p["think"] = p["nothink"].astype(float), p["think"].astype(float)
+        p["d"] = p["think"] - p["nothink"]
+        cells = [(K, str(k), et, s) for (K, k, et), s in p.groupby(["K", "k", "error_type"])]
+        for et in ERROR_TYPES + ["both"]:
+            s = p if et == "both" else p[p["error_type"] == et]
+            cells += [("all", "intermediate", et, s[~s["is_terminal"]]), ("all", "terminal", et, s[s["is_terminal"]])]
+        for K, k, et, s in cells:
+            if s.empty:
+                continue
+            by_item = s.groupby("item_id")["d"].apply(list).to_dict()
+            lo, hi = boot_ci(np.array(list(by_item)), lambda x: rate_on(x, by_item), reps, rng)
+            out.append({"model": model, "K": K, "k": k, "error_type": et, "n_cells": len(s), "n_items": len(by_item),
+                        "RR_nothink": s["nothink"].mean(), "RR_think": s["think"].mean(),
+                        "diff_think_minus_nothink": s["d"].mean(), "ci_lo": lo, "ci_hi": hi})
+    return pd.DataFrame(out)
+
+
 # ---------------------------------------------------------------- figures
 
 COLORS = {"in_context": "#2a78d6", "off_context": "#eb6834"}    # validated palette slots 1-2
@@ -297,6 +447,45 @@ def fig_forest(tab: pd.DataFrame, value: str, path: Path, title: str, label_cols
     plt.close(fig)
 
 
+MODE_COLORS = {"nothink": "#2a78d6", "think": "#eb6834"}        # same validated slots 1-2
+MODE_MARKERS = {"nothink": "o", "think": "s"}
+
+
+def fig_mode_compare(rec: pd.DataFrame, path: Path, title: str):
+    """Recovery by k, nothink vs think, one panel per K (rec = recovery_table with error types pooled)."""
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(1, 2, figsize=(9, 3.4), sharey=True)
+    for ax, K in zip(axes, [3, 4]):
+        _style(ax)
+        for mode in ["nothink", "think"]:
+            s = rec[(rec["K"] == K) & (rec["mode"] == mode)].sort_values("k")
+            if s.empty:
+                continue
+            inter, term = s[~s["is_terminal"]], s[s["is_terminal"]]
+            off = -0.06 if mode == "nothink" else 0.06
+            ax.errorbar(inter["k"] + off, inter["RR"], yerr=[inter["RR"] - inter["ci_lo"], inter["ci_hi"] - inter["RR"]],
+                        color=MODE_COLORS[mode], marker=MODE_MARKERS[mode], ms=7, lw=2, capsize=0, elinewidth=1.2,
+                        label=mode)
+            # terminal hop: hollow marker, not connected to the intermediate line
+            ax.errorbar(term["k"] + off, term["RR"], yerr=[term["RR"] - term["ci_lo"], term["ci_hi"] - term["RR"]],
+                        color=MODE_COLORS[mode], marker=MODE_MARKERS[mode], ms=7, mfc="white", mew=2, lw=0,
+                        elinewidth=1.2)
+        ax.axvline(K - 0.5, color="#c9c8c3", lw=1, ls=":")
+        ax.set_xticks(range(1, K + 1), [f"{k}" + ("\n(terminal)" if k == K else "") for k in range(1, K + 1)])
+        ax.set_ylim(0, 1.02)
+        n = rec[rec["K"] == K].groupby("mode")["n"].sum()
+        ax.set_title(f"K={K} · cells: " + ", ".join(f"{m} {v}" for m, v in n.items()), color=INK, fontsize=10,
+                     loc="left")
+        ax.set_xlabel("corrupted hop k", color=MUTED)
+    axes[0].set_ylabel("recovery rate", color=MUTED)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, frameon=False, fontsize=9, loc="upper right", ncol=2)
+    fig.suptitle(title, color=INK, fontsize=11, x=0.01, ha="left")
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
 # ---------------------------------------------------------------- main
 
 def main(argv=None):
@@ -349,6 +538,46 @@ def main(argv=None):
                        "McNemar:", mcn.round(4).to_string(index=False) if len(mcn) else "(none)",
                        text.split("\n\n")[0]]
     truncation_table(df).to_csv(tabs / "truncation.csv", index=False)
+
+    # E1 (exploratory): explicit vs silent recovery, rule-based labels
+    if "continuation" in df:
+        for name in ("linear", "all"):
+            lab = label_sc(subsets(df)[name])
+            sc_table(lab, GROUP + ["K", "k", "error_type"]).to_csv(tabs / f"silent_explicit_{name}.csv", index=False)
+            summ = sc_table(lab, GROUP + ["is_terminal"])
+            summ.to_csv(tabs / f"silent_explicit_summary_{name}.csv", index=False)
+            report += [f"\n== explicit vs silent recovery ({name} items, rule-based) ==",
+                       summ.round(3).to_string(index=False)]
+            if name == "all":
+                sc_examples(lab, out / "silent_explicit_examples.txt")
+
+    # robustness: compare modes on the items eligible in both
+    inter = intersection(df)
+    if not inter.empty:
+        n_tab = intersection_n_table(df, inter)
+        n_tab.to_csv(tabs / "n_items_intersection.csv", index=False)
+        report += ["\n== intersection: items eligible in every mode ==", n_tab.to_string(index=False)]
+        for name in ("linear", "all"):
+            d = subsets(inter)[name]
+            recovery_table(d, args.reps, rng).to_csv(tabs / f"recovery_{name}_intersection.csv", index=False)
+            psi = psi_table(d, args.reps, rng)
+            psi.to_csv(tabs / f"psi_{name}_intersection.csv", index=False)
+            term = terminal_table(d, args.reps, rng)
+            term.to_csv(tabs / f"terminal_{name}_intersection.csv", index=False)
+            md = mode_diff_table(d, args.reps, rng)
+            md.to_csv(tabs / f"mode_diff_{name}_intersection.csv", index=False)
+            text, coefs = logistic(d)
+            coefs.to_csv(tabs / f"logit_{name}_intersection.csv", index=False)
+            (out / f"logit_{name}_intersection.txt").write_text("\n".join(banner + [text]), encoding="utf-8")
+            pooled = recovery_table(d.assign(error_type="both"), args.reps, rng)
+            pooled.to_csv(tabs / f"recovery_pooled_{name}_intersection.csv", index=False)
+            if not pooled.empty:
+                fig_mode_compare(pooled, figs / f"mode_compare_{name}_intersection.png",
+                                 f"Shared items: recovery by corrupted hop ({name}; error types pooled)")
+            report += [f"\n== {name}_intersection ==", "PSI:", psi.round(3).to_string(index=False) if len(psi) else "(none)",
+                       "terminal vs intermediate:", term.round(3).to_string(index=False) if len(term) else "(none)",
+                       "mode difference (paired cells):", md.round(3).to_string(index=False) if len(md) else "(none)",
+                       text.split("\n\n")[0]]
     (out / "report.txt").write_text("\n".join(report), encoding="utf-8")
     print("\n".join(report[len(banner):]))
     print(f"\ntables -> {tabs}\nfigures -> {figs}")

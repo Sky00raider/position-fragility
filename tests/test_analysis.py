@@ -53,3 +53,48 @@ def test_analysis_end_to_end(tmp_path):
     term = pd.read_csv(out / "tables" / "terminal_all.csv")
     assert (term["diff"] < 0).all()                  # terminal hop recovers least
     assert "rel_pos" in (out / "logit_all.txt").read_text(encoding="utf-8")
+
+
+def _inject(cont, mode="nothink", correct=True, item="i0", k=1):
+    return dict(model="Fake", mode=mode, item_id=item, K=3, k=k, error_type="in_context", is_terminal=False,
+                condition="inject", clean_twin_correct=True, correct=correct, gold_hop_answer="Tucson",
+                orig_value="Tucson", new_value="Maine", continuation=cont)
+
+
+def test_sc_label_explicit_vs_silent():
+    silent = _inject("Hop 2: Which city is next? -> Tucson\nFinal answer: 1905")
+    assert analysis.sc_label(silent)["sc_label"] == "silent"           # right value, no flag
+    flagged = _inject("Wait, that is wrong.\nThe second largest city is Tucson.\nFinal answer: 1905")
+    assert analysis.sc_label(flagged)["sc_label"] == "explicit"        # marker, value in next sentence
+    far = _inject("Wait, let me think.\nHop 2: ok -> x\nHop 3: city -> Tucson\nFinal answer: 1905")
+    assert analysis.sc_label(far)["sc_label"] == "silent"              # value two sentences later
+    planted = _inject("Actually Maine is a state, not a city. Final answer: 1905")
+    assert analysis.sc_label(planted)["sc_label"] == "explicit"        # doubt next to the planted value
+    assert analysis.sc_label(_inject("Hmm Tucsonville.", correct=True))["sc_label"] == "silent"  # whole words
+    failed = _inject("However, Maine. Final answer: x", correct=False)
+    lab = analysis.sc_label(failed)
+    assert lab["sc_label"] == "not_recovered" and lab["doubt_marker"]
+
+
+def test_sc_label_think_location():
+    inside = analysis.sc_label(_inject("Hop 3: -> Maine\nWait, it should be Tucson.\n</think>\n\nFinal answer: 1905",
+                                       mode="think"))
+    assert inside["flag_think"] and not inside["flag_after"] and inside["sc_label"] == "explicit"
+    after = analysis.sc_label(_inject("Hop 3: -> Maine\n</think>\nActually, it is Tucson.\nFinal answer: 1905",
+                                      mode="think"))
+    assert after["flag_after"] and not after["flag_think"]
+    nothink = analysis.sc_label(_inject("Actually, it is Tucson.</think>"))
+    assert nothink["flag_after"] and not nothink["flag_think"]          # nothink has no think block
+
+
+def test_sc_table_and_intersection():
+    rows = [_inject("x -> Tucson"), _inject("Wait, should be Tucson.", item="i1"),
+            _inject("x", correct=False, item="i2"), _inject("x", mode="think", item="i1")]
+    tab = analysis.sc_table(analysis.label_sc(pd.DataFrame(rows)), analysis.GROUP)
+    no = tab[tab["mode"] == "nothink"].iloc[0]
+    assert no["n"] == 3 and abs(no["explicit_rate"] + no["silent_rate"] - no["RR"]) < 1e-9
+    assert abs(no["explicit_share"] - 0.5) < 1e-9
+    df = pd.DataFrame(rows + [dict(_inject("x", mode="think", item="i9"), is_linear=True)])
+    df["is_linear"] = True
+    inter = analysis.intersection(df)
+    assert set(inter["item_id"]) == {"i1"}
