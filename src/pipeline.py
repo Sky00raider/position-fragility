@@ -30,7 +30,8 @@ from .parse import extract_final, hops_well_formed, parse_hops, split_think
 from .prompts import (build_ids, build_prefix, build_trace_prefix, find_trace_mention, prefill_text,
                       user_message)
 from .store import append_jsonl, cell_key, cell_seed, done_keys, git_hash, read_jsonl, write_jsonl
-from .vet import cache_path, judge_message, load_cache, parse_verdict, vet_key
+from .vet import (PROMPT_VERSION, RULES, accepted, cache_path, judge_message, load_cache, parse_verdict,
+                  read_rule, rule_path, vet_key)
 
 
 # ---------------------------------------------------------------- shared helpers
@@ -263,6 +264,15 @@ def vet_cache(judge_cfg: Config):
     return cache_path(REPO_ROOT, judge_cfg.run_name)
 
 
+def vet_rule(judge_cfg: Config) -> str:
+    """The decision rule chosen and verified by scripts/vet_gate.py; stop if the gate has not passed."""
+    rule = read_rule(rule_path(REPO_ROOT, judge_cfg.run_name))
+    if rule is None:
+        sys.exit(f"no vet rule at {rule_path(REPO_ROOT, judge_cfg.run_name)}: "
+                 f"run scripts/vet_gate.py first (and it must pass)")
+    return rule
+
+
 def inject_inputs(cfg: Config):
     """What inject and vet both need: items, baselines, eligible records, off-context pool."""
     items = {it["id"]: it for it in run_items(cfg)}
@@ -272,9 +282,9 @@ def inject_inputs(cfg: Config):
     return items, base, elig, off_pool
 
 
-def run_judge(judge_cfg: Config, triples: list[tuple[str, str, str]], cache_file=None) -> dict[str, bool]:
+def run_judge(judge_cfg: Config, triples: list[tuple[str, str, str]], cache_file=None) -> dict[str, dict]:
     """Judge (sub-question, gold, candidate) triples not yet in the cache; append verdicts after each
-    batch (resumable). Returns the full cache as vet_key -> ok."""
+    batch (resumable). Returns the full cache as vet_key -> the judge's answers."""
     cache_file = cache_file or vet_cache(judge_cfg)
     cache = load_cache(cache_file)
     todo, seen = [], set()
@@ -295,13 +305,14 @@ def run_judge(judge_cfg: Config, triples: list[tuple[str, str, str]], cache_file
         gens = backend.generate(ids, [0] * len(batch), judge_cfg.decoding.max_tokens)
         rows = []
         for (subq, gold, cand), g in zip(batch, gens):
-            v = parse_verdict(g.text)
             rows.append({"key": vet_key(subq, gold, cand), "subq": subq, "gold": gold, "cand": cand,
-                         **v, "raw": g.text, **meta})
-            cache[rows[-1]["key"]] = v["ok"]
+                         **parse_verdict(g.text), "raw": g.text, "prompt_version": PROMPT_VERSION, **meta})
+            cache[rows[-1]["key"]] = rows[-1]
         append_jsonl(cache_file, rows)
-        print(f"[vet] {i + len(batch)}/{len(todo)} judged; accepted so far "
-              f"{sum(r['ok'] for r in rows)}/{len(rows)} in this batch", flush=True)
+        unparsed = sum(r["same_kind"] is None or r["believable"] is None for r in rows)
+        print(f"[vet] {i + len(batch)}/{len(todo)} judged; this batch: same_kind yes "
+              f"{sum(bool(r['same_kind']) for r in rows)}, believable yes {sum(bool(r['believable']) for r in rows)}, "
+              f"unparsed {unparsed} of {len(rows)}", flush=True)
     return cache
 
 
@@ -328,20 +339,22 @@ def cmd_vet(args):
                 if cands:
                     slots.append((subq, gold, cands))
     judge_cfg = judge_config(cfg)
+    rule = vet_rule(judge_cfg)
+    ok = lambda v: None if v is None else RULES[rule](v)  # noqa: E731
     cache = load_cache(vet_cache(judge_cfg))
     for rnd in itertools.count(1):
         triples = []
         for subq, gold, cands in slots:
-            verdicts = [cache.get(vet_key(subq, gold, c)) for c in cands]
+            verdicts = [ok(cache.get(vet_key(subq, gold, c))) for c in cands]
             if any(verdicts):
                 continue
             new = [c for c, v in zip(cands, verdicts) if v is None][:cfg.vet_per_round]
             triples += [(subq, gold, c) for c in new]
         if not triples:
             break
-        print(f"[vet] round {rnd}: {len(triples)} candidates", flush=True)
+        print(f"[vet] round {rnd}: {len(triples)} candidates (rule: {rule})", flush=True)
         cache = run_judge(judge_cfg, triples)
-    n_ok = sum(any(cache.get(vet_key(s, g, c)) for c in cands) for s, g, cands in slots)
+    n_ok = sum(any(ok(cache.get(vet_key(s, g, c))) for c in cands) for s, g, cands in slots)
     print(f"[vet] {cfg.run_name}: {n_ok}/{len(slots)} cells have an accepted value "
           f"({len(slots) - n_ok} will be dropped as vet_rejected)")
 
@@ -354,9 +367,10 @@ def cmd_inject(args):
     items, base, elig, off_pool = inject_inputs(cfg)
     vetted = None
     if cfg.vet_values:
-        vetted = load_cache(vet_cache(judge_config(cfg)))
+        judge_cfg = judge_config(cfg)
+        vetted = accepted(load_cache(vet_cache(judge_cfg)), vet_rule(judge_cfg))
         if not vetted:
-            sys.exit(f"vet_values is on but {vet_cache(judge_config(cfg))} is empty: run `vet` first")
+            sys.exit(f"vet_values is on but {vet_cache(judge_cfg)} is empty: run `vet` first")
     cells, dropped = [], []
     for e in elig:
         it = items[e["item_id"]]

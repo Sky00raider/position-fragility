@@ -581,3 +581,28 @@ contribution (i) "errors injected into models' own reasoning chains". Added an A
 DRAFT AI-use statement (IEEE requires it; authors must approve; marked \tbd). Cuts to stay at 8 pages:
 Related Work "Position effects in the input" (3 refs gone), tokenization detail, Llama system header,
 closed-book cap, RQ4 shared-item and clean-twin McNemar detail.
+
+### v2 gate FAILED on the GPU box (24 Oct 22:01); judge v2 + recalibrated gate **[method] [result]**
+Friend ran the v2 command; the gate stopped everything (as designed). Visible in the log tail: only 7
+judge-accepted values the reference calls bad (list prints up to 10), e.g. Marco Polo born in "France"
+for "Venice", League of Nations in "Belgrade" for "Switzerland": city/country confusion, and likely too
+few acceptances (exact numbers had scrolled off; the full log and `runs/vet/qwen3_8b_nothink.jsonl` were
+requested). Fallback started per plan: v1 `qwen3_8b_think_trace` that night.
+Fixes (CPU-tested end to end with Qwen3-0.6B as judge):
+- **Prompt v2** (`src/vet.py`, PROMPT_VERSION=2): the judge first writes kind_of_correct /
+  kind_of_candidate, then same_kind / believable; max_tokens 24 → 48.
+- **Cache now stores answers, not decisions**, and is versioned per judge AND prompt
+  (`runs/vet/<judge>_p2.jsonl`): latent bug fixed (a prompt change would have reused v1 verdicts).
+- **Decision rule chosen by the gate, honestly:** rules both / believable / same_kind; chosen on a fixed
+  hash half of the reference (tune), verified on the other half (holdout); pass writes
+  `runs/vet/<judge>_p2.rule.json`, which `vet` and `inject` require (they exit without it; a failed
+  gate deletes any stale rule file).
+- **Gate recalibrated:** min precision 0.75 → **0.65**, min acceptance 0.20 → **0.15**. Reason, measured:
+  against the reference labels a careful human (audit rater B) reaches precision **0.74** (rule both;
+  0.72 same_kind) — the reference is noisy (human–Sonnet κ 0.57 on plausibility) — so 0.75 was above
+  the human ceiling; unfiltered v1 values sit at ~0.39. Acceptance 0.15 with up to 12 candidates per
+  cell still gives ≥ ~86% of cells a value.
+- Gate output now prints every rule's numbers on tune/holdout/all, unparsed-answer count, and the
+  judge's kind labels for its mistakes, so a failure is diagnosable from the log tail.
+Tests 52 → 54. Next GPU night: same v2 command; think_trace_v2 will reuse tonight's v1 think_trace
+clean cells.

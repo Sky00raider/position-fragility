@@ -4,17 +4,57 @@ from src.backends import Backend, Gen
 from src.config import Config
 from src.inject import pick_value
 from src.store import read_jsonl, write_jsonl
-from src.vet import load_cache, parse_verdict, resolve_refs, vet_key
+import importlib.util
+import json
+from pathlib import Path
+
+from src.vet import RULES, accepted, load_cache, parse_verdict, read_rule, resolve_refs, vet_key
+
+both = RULES["both"]
 
 
 def test_parse_verdict():
-    assert parse_verdict("same_kind: yes\nbelievable: yes")["ok"]
-    assert parse_verdict("Same_kind: **yes**\nBelievable: Yes")["ok"]
-    assert not parse_verdict("same_kind: yes\nbelievable: no")["ok"]
-    assert not parse_verdict("same_kind: no\nbelievable: yes")["ok"]
-    v = parse_verdict("I think so.")                      # unparseable counts as rejected
-    assert not v["ok"] and v["same_kind"] is None
-    assert not parse_verdict("same_kind: yes")["ok"]      # half an answer is not an accept
+    v = parse_verdict("kind_of_correct: city\nkind_of_candidate: country\nsame_kind: no\nbelievable: yes")
+    assert v["kind_correct"] == "city" and v["kind_candidate"] == "country"
+    assert v["same_kind"] is False and v["believable"] is True
+    assert both(parse_verdict("same_kind: yes\nbelievable: yes"))
+    assert both(parse_verdict("Same_kind: **yes**\nBelievable: Yes"))
+    assert not both(parse_verdict("same_kind: yes\nbelievable: no"))
+    assert RULES["believable"](parse_verdict("same_kind: no\nbelievable: yes"))
+    v = parse_verdict("I think so.")                      # unparseable counts as rejected by every rule
+    assert v["same_kind"] is None and not any(rule(v) for rule in RULES.values())
+    assert not both(parse_verdict("same_kind: yes"))      # half an answer is not an accept
+
+
+def test_accepted_and_read_rule(tmp_path):
+    cache = {"a": {"same_kind": True, "believable": False}, "b": {"same_kind": True, "believable": True}}
+    assert accepted(cache, "both") == {"a": False, "b": True}
+    assert accepted(cache, "same_kind") == {"a": True, "b": True}
+    p = tmp_path / "r.json"
+    assert read_rule(p) is None                           # no file: gate has not passed
+    p.write_text(json.dumps({"rule": "believable"}))
+    assert read_rule(p) == "believable"
+    p.write_text(json.dumps({"rule": "made_up"}))
+    assert read_rule(p) is None
+
+
+def load_gate():
+    spec = importlib.util.spec_from_file_location("vet_gate", Path(__file__).parents[1] / "scripts" / "vet_gate.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_gate_choose_rule():
+    gate = load_gate()
+    # 'both' is precise but accepts little; 'believable' accepts more but is sloppy
+    rows = []
+    for i in range(20):
+        ok = i < 8
+        rows.append({"ok": ok, "judge": {"both": ok and i < 4, "believable": ok or i < 14, "same_kind": i % 2 == 0}})
+    assert gate.choose_rule(rows, min_accept=0.15) == "both"      # 4/20 = 20% accepted, precision 1.0
+    assert gate.choose_rule(rows, min_accept=0.5) == "believable"  # only rule over 50%
+    assert gate.choose_rule(rows, min_accept=0.9) is None
 
 
 def test_resolve_refs():
@@ -75,7 +115,7 @@ def test_run_judge_caches_and_skips_known(tmp_path, monkeypatch):
     assert fake.n == 3                                   # duplicate judged once
     pipeline.run_judge(judge, triples, cache_path)
     assert fake.n == 3                                   # all cached now
-    assert load_cache(cache_path)[vet_key("q", "g", "b")] is True
+    assert both(load_cache(cache_path)[vet_key("q", "g", "b")])
 
 
 def test_reuse_cells_only_identical_prompts(tmp_path, monkeypatch):

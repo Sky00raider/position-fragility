@@ -135,7 +135,7 @@ def judge_config(cfg: Config) -> Config:
     j = load_config(REPO_ROOT / "configs" / f"{cfg.vet_judge}.yaml")
     if j.think:
         raise ValueError("vet_judge must be a nothink config (the judge answers in two short lines)")
-    j.decoding = Decoding(temperature=0.0, top_p=1.0, top_k=0, max_tokens=24)
+    j.decoding = Decoding(temperature=0.0, top_p=1.0, top_k=0, max_tokens=48)   # four short lines (prompt v2)
     return j
 
 
