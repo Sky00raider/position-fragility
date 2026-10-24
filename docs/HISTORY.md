@@ -402,3 +402,21 @@ yee title/authors); lanham, chen2025, yee venue still `% VERIFY`. Facts that sha
 So our intermediate-hop late-stage fragility agrees with ASCoT's intermediate steps and disagrees with
 the other two. Draft is ~5.5k words incl. tables: may be long for a 6-page IEEE limit (venue limit
 not yet confirmed).
+
+### Planted-value audit: LLM rater A finds half the values are the wrong fine type **[method] [result] [limit] [deviation]**
+2026-10-24. Deviation: audit raters are now one author (B, pending; fills `docs/audit/audit_sheet_B.csv`)
++ a Claude Sonnet subagent (A). A's ratings are kept out of git in `runs/audit/audit_A_llm.csv` so the
+human rater can't see them; merge both into `audit_sheet_filled.csv` and run `make_audit.py --score`.
+**Rater A: type_ok 50/100, plausible 41/100** (in-context 22/24 of 50, off-context 28/17). Spot-checked
+12 rows by hand: A is right (CBS planted for "who burned down Atlanta", Tennessee for "what city",
+UN Security Council for a baseball team). Cause: rule 2 matches coarse spaCy tags (GPE = city/state/
+country; ORG catches teams, councils, mistagged people). By tag: PERSON type_ok 87%, dates fine,
+GPE 44%/56%, ORG 32%/18%. **Early vs late hops similar** (plausible 41% vs 38%), so no position bias in
+the sample.
+Robustness (`scripts/tag_robustness.py` → `runs/analysis_main/tables/psi_by_tag_linear.csv`, linear,
+2000 reps): PSI by corrupted-hop tag group. **Cleanest group (PERSON/date/number) has the strongest
+late-stage fragility**: Qwen nothink K=3 −0.31 [−0.43, −0.18] / −0.37 [−0.50, −0.24]; Llama −0.14 / −0.25.
+Places: −0.14 to −0.21 (both nothink models, K=3). ORG/NORP/other (worst values): PSI ≈ 0, CIs include 0.
+So implausible values dilute the position effect rather than create it. Caveat: groups differ in hops
+and items (PERSON mostly at hop 1). Paper: audit paragraph in Method, robustness paragraph in RQ1,
+Limitations updated; the Intro no longer calls the values "plausible".
