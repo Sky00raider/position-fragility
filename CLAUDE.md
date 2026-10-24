@@ -1,5 +1,8 @@
 # CLAUDE.md: position-fragility (REDUCED SCOPE)
 
+**New session? Read `docs/STATUS.md` first** (current state, in-progress runs, next steps), then
+`docs/HISTORY.md` for the full decision log.
+
 Full design: `docs/design_v2.md`. **This file overrides it where they differ.**
 Deadlines: experiments done **Oct 27 2026**, paper submitted **Oct 30 2026**.
 4-person student team: keep code simple and readable; the method section is written from it.
