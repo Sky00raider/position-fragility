@@ -3,6 +3,11 @@
 Last updated: 2026-10-24 (Sat), after drafting the Results section (think_trace results still pending).
 Full decision log with numbers: `docs/HISTORY.md`. Rules: `CLAUDE.md`. Design doc: `docs/design_v2.md`.
 
+## ⚠ REMIND THE USER FIRST (every session until done)
+Ask the user to check with their friend (GPU box owner) whether the `qwen3_8b_think_trace` overnight run
+happened and to send its run folder. Friend was unavailable on Oct 24. Cutoff: if not back by the
+evening of Oct 26, drop think_trace and use the fallback framing (see below).
+
 ## Deadlines
 Experiments done **Oct 27 2026**, paper submitted **Oct 30 2026** (IEEE conference; 4-person student team).
 

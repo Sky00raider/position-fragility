@@ -1,5 +1,10 @@
 # Hand audit of planted values (doc §6.5 rule 5)
 
+**Changed 2026-10-24:** rater A is an LLM (Claude Sonnet subagent, ratings kept outside this folder until
+merged), rater B is one author. The human fills **`audit_sheet_B.csv`** (B columns only, so they never
+see A's answers) and gives it back. The two are then merged into `audit_sheet_filled.csv` and scored as
+below. The paper says "one author and an LLM rater".
+
 `audit_sheet.csv` has 100 planted values (25 per error type × K=3/4, dev split). Two people fill it
 in **independently** (don't look at each other's columns), in Excel/Sheets.
 
