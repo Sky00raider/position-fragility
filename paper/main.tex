@@ -105,7 +105,7 @@ For an eligible item with $K$ hops we run:
 This gives $1+3K$ cells per item (10 for $K{=}3$, 13 for $K{=}4$) before validity drops. Hop $K$ produces the final answer; corrupting it is analyzed separately as the \emph{terminal} step and is never pooled with ``late'' intermediate hops.
 
 \subsection{Injection by assistant-turn prefill}
-Corruptions are applied to the model's own text, not to a gold template. The prefix is the model's own answer text cut at the end of hop line $k$, with only the answer span after the arrow on that line replaced; it ends in exactly one newline. The prefix is appended after the chat template's assistant header, so the model continues its own turn: no new user turn is opened and no end-of-turn token is placed at the splice. For Qwen3 in non-thinking mode the template's empty think block precedes the prefix; in thinking mode the prefix is placed inside the think block (\texttt{<think>\textbackslash n} + hop lines), and the model continues reasoning before it answers. \todo{confirm from the pilot that Qwen3-8B keeps the hop format inside thinking; otherwise switch to parsing hops from the think block or to paragraph-level injection as in~\cite{vonrecum}.}
+Corruptions are applied to the model's own text, not to a gold template. The prefix is the model's own answer text cut at the end of hop line $k$, with only the answer span after the arrow on that line replaced; it ends in exactly one newline. The prefix is appended after the chat template's assistant header, so the model continues its own turn: no new user turn is opened and no end-of-turn token is placed at the splice. For Qwen3 in non-thinking mode the template's empty think block precedes the prefix; in thinking mode the prefix is placed inside the think block (\texttt{<think>\textbackslash n} + hop lines), and the model continues in hop format inside the think block before it answers (confirmed in the pilot). \tbd{describe the think\_trace injection site if its run succeeds.}
 
 Prompt text is tokenized once, without adding special tokens, and the identical token ids are passed to the inference engine. Unit tests check, for every tokenizer used, that the spliced ids contain no end-of-turn token after the template, that the template tokens are unchanged by the splice, and that Llama receives exactly one BOS token.
 
@@ -147,8 +147,8 @@ with early $k{=}1$ and late $k{=}K{-}1$ ($k{=}2$ for $K{=}3$, $k{=}3$ for $K{=}4
 
 \subsection{Models and inference}
 \textbf{Qwen3-8B}~\cite{qwen3}, 4-bit AWQ~\cite{awq} (\texttt{Qwen/Qwen3-8B-AWQ}, revision \texttt{4da05a8}), run with \texttt{enable\_thinking} off and on. Same weights in both modes, so the comparison isolates the thinking mode.
-\textbf{Llama-3.1-8B-Instruct}~\cite{llama3}, 4-bit AWQ (\texttt{hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4}, revision \texttt{db1f81a}), non-thinking only. \tbd{drop if not run.}
-Inference uses vLLM~\cite{vllm} \tbd{version} on an RTX 5070 (12\,GB) \tbd{and RTX 3070 (8\,GB) for Llama}, with an 8{,}192-token context. Each model--mode pair runs on one GPU for all of its conditions.
+\textbf{Llama-3.1-8B-Instruct}~\cite{llama3}, 4-bit AWQ (\texttt{hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4}, revision \texttt{db1f81a}), non-thinking only.
+Inference uses vLLM~\cite{vllm} 0.32.0 on one RTX 5070 (12\,GB), with an 8{,}192-token context. Each model--mode pair runs on one GPU for all of its conditions.
 
 \begin{table}[t]
 \centering
@@ -165,10 +165,32 @@ Llama-3.1-8B-Instruct & 0.6 & 0.9 & -- & 1024 \\
 \end{tabular}
 \end{table}
 
-\textbf{Decoding} (Table~\ref{tab:decoding}) follows each model's recommended sampling settings and is identical across all conditions within a model--mode pair. Closed-book runs cap generation at 512 tokens in non-thinking mode. Each cell draws one sample with its own seed, derived from a SHA-256 hash of (run, item, condition, hop, error type), so results do not depend on batching and interrupted runs resume reproducibly. Llama's chat template adds a fixed system header (``Today Date: 26 Jul 2024''), identical for all prompts. The thinking-mode cap of 4{,}096 new tokens truncated 6\% of pilot baselines; truncated baselines are ineligible and no pilot continuation was truncated, so we kept the cap. Per-cell truncation rates are reported in \tbd{appendix table}.
+\textbf{Decoding} (Table~\ref{tab:decoding}) follows each model's recommended sampling settings and is identical across all conditions within a model--mode pair. Closed-book runs cap generation at 512 tokens in non-thinking mode. Each cell draws one sample with its own seed, derived from a SHA-256 hash of (run, item, condition, hop, error type), so results do not depend on batching and interrupted runs resume reproducibly. Llama's chat template adds a fixed system header (``Today Date: 26 Jul 2024''), identical for all prompts. The thinking-mode cap of 4{,}096 new tokens truncated 6\% of pilot baselines; truncated baselines are ineligible and no pilot continuation was truncated, so we kept the cap. In the main runs, 3\% of thinking baselines were truncated (and excluded), and no condition cell had more than 3\% of its continuations truncated.
 
 \subsection{Item counts}
-\tbd{Items attempted per split and $K$; eligible items per model--mode (overall, linear); cells run; cells dropped by validity rule. Target from the power analysis: 300--400 eligible items per $K$ per model.}
+Table~\ref{tab:counts} gives the yield. Non-thinking runs attempt all 6{,}727 three- and four-hop items. The thinking run attempts 600 three-hop items and all 1{,}580 four-hop items, oversampling four-hop items because of their low pilot yield. Most items fail eligibility because the final answer is wrong or the chain takes a route other than MuSiQue's decomposition. Four-hop items rarely pass without thinking, so four-hop non-thinking contrasts are underpowered, far below the 300--400 items per $K$ targeted by the power analysis.
+
+\begin{table}[t]
+\centering
+\caption{Items and cells per model--mode. Linear: 3hop1/4hop1 chains (primary analysis set).}
+\label{tab:counts}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccc}
+\toprule
+ & Qwen3 & Qwen3 & Llama-3.1 \\
+ & non-thinking & thinking & non-thinking \\
+\midrule
+Items attempted & 6{,}727 & 2{,}180 & 6{,}727 \\
+Final answer correct & 44\% & 52\% & 36\% \\
+Eligible ($K{=}3$ / $K{=}4$) & 855 / 67 & 167 / 217 & 523 / 41 \\
+Eligible linear ($K{=}3$ / $K{=}4$) & 763 / 33 & 147 / 154 & 438 / 15 \\
+Inject cells & 5{,}413 & 2{,}565 & 3{,}289 \\
+Inject cells dropped (validity) & 253 & 173 & 177 \\
+Clean twins correct & 97\% & 79\% & 88\% \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Statistical analysis}
 All confidence intervals are item-clustered percentile bootstraps (items resampled with replacement, 2{,}000 replicates). We report:
@@ -184,11 +206,85 @@ All confidence intervals are item-clustered percentile bootstraps (items resampl
 \]
 with standard errors clustered by item and variance inflation factors reported, since rel\_pos, remaining and $K$ are partly collinear by construction.
 \end{itemize}
-Primary results use linear chains; all-item results and results excluding truncated runs are reported as robustness checks, since a truncated run counts as wrong and truncation could differ by position. Before the main runs we ran a pilot of 50 dev items per mode and required clean-twin accuracy of about 90\% (lower would mean resumption itself is broken) \tbd{pilot outcome}.
+Primary results use linear chains; all-item results and results excluding truncated runs are reported as robustness checks, since a truncated run counts as wrong and truncation could differ by position. Before the main runs we ran a pilot of 50 dev items per mode and required clean-twin accuracy of about 90\% (lower would mean resumption itself is broken). In the pilot, clean twins were correct in 7/7 non-thinking and 31/32 thinking cells. In the main runs the thinking mode fell below this target (Section~\ref{sec:results}).
 
 % ======================================================================
 \section{Results}
-\todo{RQ1 position; RQ2 remaining steps (matched contrasts); RQ3 terminal step; RQ4 thinking (rel\_pos $\times$ mode); RQ5 error type. Figures from \texttt{runs/analysis/figures}.}
+\label{sec:results}
+Unless stated otherwise, numbers are for linear chains, $\RR$ is conditioned on a correct clean twin, and brackets give 95\% item-bootstrap CIs. All-item results agree in sign and size with every linear result below. Truncation is below 3\% in every cell, and excluding truncated runs changes no $\PSI$ by more than 0.003. Four-hop non-thinking sets are small (33 linear items for Qwen3, 15 for Llama), so their contrasts have wide intervals.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.82\textwidth]{figures/recovery_linear.png}
+\caption{Recovery rate by corrupted hop $k$ (linear chains; 95\% item-bootstrap CIs). Hollow markers: terminal hop, analyzed separately. Recovery falls from early to late intermediate hops in every panel and collapses at the terminal hop without thinking.}
+\label{fig:recovery}
+\end{figure*}
+
+\subsection{Resumption without an error (clean twins)}
+\label{sec:res-twins}
+Resuming from the model's own uncorrupted prefix succeeds at 96--100\% of intermediate hops for Qwen3 without thinking and 82--87\% for Llama ($K{=}3$). For Qwen3 with thinking it succeeds at only 68--86\% (terminal hop: 100\%), below the $\approx$90\% target set before the runs. An audit of all failing twins found no scoring error: the gold answer never appears as a final answer. Instead, in thinking mode 80\% of failing twins leave the model's own chain at a later hop and 21\% give the right entity at a different granularity (``1991'' for \emph{December 25, 1991}); the other two runs show similar proportions. The cause in thinking mode is the prefix itself. With hop lines placed inside the think block, Qwen3 treats reasoning as finished: all 985 intermediate clean continuations contain only hop lines and a final answer, with a median of 110 generated tokens against 1{,}231 for an unprefixed resample. The prefill also costs accuracy in thinking mode (clean twin wrong and resample of the same item right in 183 cells vs.\ the reverse in 68; McNemar $p=2\times10^{-13}$) but not without thinking ($p=0.22$ for Qwen3). Thinking-mode $\RR$ is therefore measured on items the model can finish without further deliberation, and its continuations are short (Section~\ref{sec:res-thinking}).
+
+\subsection{RQ1: Position of an intermediate error}
+Late intermediate errors are recovered \emph{less} often than early ones, the opposite of H1 (Fig.~\ref{fig:recovery}, Table~\ref{tab:psi}). $\PSI$ is negative in all 12 model $\times$ mode $\times$ error type $\times K$ cells, and its CI excludes zero in 8; the four exceptions are the small four-hop non-thinking sets and one thinking cell whose CI reaches zero. The effect is clearest for Qwen3 without thinking at $K{=}3$, where recovery drops from 0.62 to 0.48 (in-context) and from 0.70 to 0.50 (off-context). In paired items, recovery at the early hop but not the late hop occurs 148 and 195 times, against 59 and 53 for the reverse (Holm-adjusted McNemar $p<10^{-8}$). Llama shows the same pattern at $K{=}3$ ($\PSI=-0.09$ and $-0.13$; McNemar $p_\text{Holm}=0.001$ for off-context). With thinking, $\PSI$ is $-0.09$ to $-0.12$, but its paired tests do not survive Holm adjustment (98--113 pairs per cell). No cell meets the $\pm$5\,pp equivalence criterion. The direction matches the late-stage fragility reported by ASCoT~\cite{ascot} and contradicts the early-error account~\cite{vonrecum,jiamu}.
+
+\begin{table*}[t]
+\centering
+\caption{Position sensitivity $\PSI=\RR_\text{late}-\RR_\text{early}$ on intermediate hops (linear chains, 95\% item-bootstrap CIs). $n$: eligible linear items.}
+\label{tab:psi}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrcc}
+\toprule
+ & $K$ & $n$ & in-context & off-context \\
+\midrule
+Qwen3, non-thinking & 3 & 763 & $-0.14$ [$-0.18$, $-0.10$] & $-0.20$ [$-0.24$, $-0.16$] \\
+ & 4 & 33 & $-0.14$ [$-0.34$, $\phantom{-}0.07$] & $-0.26$ [$-0.47$, $-0.04$] \\
+Qwen3, thinking & 3 & 147 & $-0.11$ [$-0.19$, $-0.04$] & $-0.12$ [$-0.21$, $-0.04$] \\
+ & 4 & 154 & $-0.09$ [$-0.19$, $\phantom{-}0.00$] & $-0.11$ [$-0.20$, $-0.02$] \\
+Llama-3.1, non-thinking & 3 & 438 & $-0.09$ [$-0.15$, $-0.03$] & $-0.13$ [$-0.19$, $-0.07$] \\
+ & 4 & 15 & $-0.26$ [$-0.53$, $\phantom{-}0.00$] & $-0.12$ [$-0.39$, $\phantom{-}0.12$] \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{RQ2: Position or remaining steps?}
+The data cannot separate position from remaining steps. In the matched-remaining contrasts (same number of later hops, different absolute position), Qwen3 without thinking shows differences of $-0.04$ to $+0.05$, consistent with remaining steps driving the effect, but the CIs span about $\pm0.17$ because the four-hop cells hold about 32 items. With thinking the differences range from $-0.10$ to $+0.04$; one of the four CIs excludes zero. Llama's four-hop cells (13--15 items) are uninformative. In the regression (Table~\ref{tab:logit}), relative position keeps a negative coefficient with remaining steps and $K$ in the model ($\beta=-3.67$, $p=0.023$), while remaining steps ($\beta=-0.58$, $p=0.27$) and $K$ ($p=0.44$) do not. The variance inflation factors of relative position and remaining steps are 87 and 104, so this split of the effect is not reliable. We therefore read the position effect as consistent with, but not separable from, the number of steps left after the error.
+
+\begin{table}[t]
+\centering
+\caption{Logistic regression of recovery on intermediate inject cells with a correct clean twin (linear chains; 5{,}670 cells, 1{,}177 items; item-clustered SEs). VIF: variance inflation factor.}
+\label{tab:logit}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Term & $\beta$ & SE & $p$ & VIF \\
+\midrule
+rel\_pos & $-3.67$ & 1.62 & 0.023 & 87 \\
+remaining & $-0.58$ & 0.52 & 0.27 & 104 \\
+$K$ & $0.23$ & 0.30 & 0.44 & 11 \\
+mode = thinking & $1.52$ & 0.32 & $<$0.001 & 13 \\
+rel\_pos $\times$ thinking & $-0.24$ & 0.54 & 0.66 & 14 \\
+off-context error & $0.15$ & 0.05 & 0.002 & 1.0 \\
+item difficulty & $-1.12$ & 0.16 & $<$0.001 & 1.1 \\
+model = Qwen3 & $-0.35$ & 0.09 & $<$0.001 & 1.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{RQ3: The terminal step}
+Errors at the terminal hop are almost never recovered without thinking: $\RR$ is 0.02 and 0.00 for Qwen3 (in-/off-context) and 0.15 and 0.07 for Llama, against 0.56--0.64 at intermediate hops of the same models. The models copy the corrupted last-hop answer into the final answer (Qwen3 adopts the planted value in 98--99\% of terminal cells, Llama in 75--88\%). With thinking, terminal recovery is 0.60 for both error types, still 0.22 below intermediate hops (CIs $-0.29$ to $-0.15$). Pooling the terminal hop with ``late'' hops would therefore make late errors look far more harmful than the intermediate-hop contrast shows.
+
+\subsection{RQ4: Thinking mode}
+\label{sec:res-thinking}
+Thinking raises recovery at every hop: intermediate $\RR$ is 0.83 and 0.82 with thinking against 0.56 and 0.60 without (in-/off-context; mode $\beta=+1.52$, $p<0.001$). It does not change the shape: the relative position $\times$ mode interaction is small and not significant ($\beta=-0.24$, $p=0.66$), and late errors remain more harmful with thinking (Table~\ref{tab:psi}). Because eligibility differs between modes, we repeated the comparison on the 83 linear items eligible in both (63 three-hop, 20 four-hop). There, thinking still raises recovery on the same cells (intermediate $+0.24$ [0.17, 0.31]; terminal $+0.70$ [0.63, 0.78]), and the terminal hop stays below intermediate hops in both modes. Without thinking $\PSI$ stays negative ($K{=}3$: $-0.14$ and $-0.28$), but with thinking it shrinks to $0.00$ and $-0.10$ with CIs that include zero. The interaction remains non-significant ($p=0.34$) on this smaller set, so the shared items neither confirm nor rule out a change of shape.
+
+These comparisons concern a thinking mode in which the model barely deliberates after the error (Section~\ref{sec:res-twins}): most recoveries happen when the model restates the chain after \texttt{</think>}, rewriting the corrupted hop with the correct entity. \tbd{think\_trace: error planted mid-thought in the model's own thinking trace; continuation length, clean-twin accuracy, $\RR$ and $\PSI$ vs.\ the summary-prefill condition. If continuations stay short, state the summary-prefill result as ``thinking format without post-error deliberation'' and move this to Limitations.}
+
+\subsection{RQ5: Error type}
+Off-context swaps, which nothing in the context supports, are recovered slightly more often than in-context distractors ($\beta=+0.15$, $p=0.002$; e.g., Qwen3 without thinking at $K{=}3$, $k{=}1$: 0.70 vs.\ 0.62). The difference is small next to the effects of position, the terminal hop and thinking. With thinking it is inconsistent in sign, and at Llama's terminal hop it reverses (0.15 in-context vs.\ 0.07 off-context).
+
+\subsection{How recovery happens}
+Recovery is almost always silent. A rule-based labeler calls a recovery \emph{explicit} if a doubt or correction marker (e.g., ``wait'', ``actually'', ``incorrect'', ``should be'') occurs in the same or the next sentence as the planted or the true hop value, and \emph{silent} otherwise. It marks none of Qwen3's non-thinking recoveries and 0.2\% of its thinking recoveries as explicit; Llama flags the error in 9\% of its intermediate-hop recoveries. Typically the model simply writes the correct entity in a later hop or in its restated chain, without commenting on the planted value. Doubt markers do not indicate success: Llama uses them more often when it fails (15\%) than when it recovers (12\%). These labels are rule-based and were not validated by hand beyond spot checks.
 
 \section{Limitations}
 \todo{4-bit 8B models only; planted vs.\ natural errors; position/remaining/$K$ dependence; one sample per cell (binary item difficulty); English Wikipedia; possible contamination (closed-book filter only); spaCy type tags (audit numbers); thinking-mode prefix placement.}

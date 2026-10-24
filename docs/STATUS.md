@@ -1,6 +1,6 @@
 # STATUS / handoff (read this first in a new session)
 
-Last updated: 2026-10-24 (Sat), after building the `think_trace` condition.
+Last updated: 2026-10-24 (Sat), after drafting the Results section (think_trace results still pending).
 Full decision log with numbers: `docs/HISTORY.md`. Rules: `CLAUDE.md`. Design doc: `docs/design_v2.md`.
 
 ## Deadlines
@@ -36,6 +36,8 @@ New condition (commit 4b840fb): error planted mid-thought in the model's own thi
 `git pull && bash scripts/overnight.sh qwen3_8b_think_trace` (~2.5–3.5 h).
 
 ### When its results arrive (next session's first job)
+As of the Oct 24 session they had NOT arrived: `runs/qwen3_8b_think_trace` is only the local dry run
+(baseline/cells/eligibility/dropped, no generations or scored.jsonl). Don't mistake it for results.
 1. Results land as a new folder in `Research Paper/` (e.g. `main_results_archlinux_2026102x_xxxx/`),
    run under `home/burr/Documents/position-fragility/runs/qwen3_8b_think_trace`. Copy it to
    `runs/qwen3_8b_think_trace` (keep the pristine folder).
@@ -51,7 +53,10 @@ New condition (commit 4b840fb): error planted mid-thought in the model's own thi
 
 ## Remaining work before Oct 30
 - [ ] think_trace results → analysis → HISTORY (above)
-- [ ] Paper: Results section (from runs/analysis_main tables/figures + HISTORY), Intro, Related Work,
+- [x] Paper: Results section drafted from runs/analysis_main (+ item-count table, setup tbds). Two
+      `\tbd`s wait for think_trace: RQ4 paragraph and the Method sentence on the injection site.
+      If think_trace adds panels, re-copy `runs/analysis_main/figures/recovery_linear.png` to `paper/figures/`.
+- [ ] Paper (rest): Intro, Related Work,
       Abstract, Limitations; add think_trace to Method/Setup; fill `\tbd{}`; verify every `% VERIFY` in refs.bib
 - [ ] Hand audit by 2 teammates → `python scripts/make_audit.py --score <filled csv>` → Method numbers
 - [ ] Keep `../main_results_*` backed up (Google Drive)

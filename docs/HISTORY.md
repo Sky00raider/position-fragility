@@ -375,3 +375,16 @@ k (12%, 22%, 36%, 57% for k=1..4). Caveat for the paper: the first mention is so
 *reading* a paragraph rather than concluding. Analysis now compares all mode pairs (nothink /
 think / think_trace) on shared items. GPU run: `bash scripts/overnight.sh qwen3_8b_think_trace`
 (~2.5–3.5 h).
+
+### Paper: Results section drafted (no think_trace yet) **[paper]**
+2026-10-24, next session. think_trace GPU results had not arrived (`runs/qwen3_8b_think_trace`
+holds only the local dry run: cells, no generations), so the Results section was written from
+`runs/analysis_main` (nothink / think / Llama), which stands either way. `paper/main.tex` now has:
+clean-twin subsection (think prefill cuts deliberation), RQ1 with PSI table (`tab:psi`, table*),
+RQ2 with the regression table (`tab:logit`, VIFs), RQ3 terminal, RQ4 thinking (full + shared-item
+sets), RQ5 error type, silent recovery; Fig. `recovery_linear.png` copied to `paper/figures/`
+(upload it to Overleaf with main.tex). Also filled: item-count table (`tab:counts`), vLLM 0.32.0 /
+single RTX 5070, pilot clean-twin outcome, main-run truncation. Numbers checked against the CSVs:
+excluding truncated runs moves PSI by ≤ 0.003; shared linear items = 83 (63 + 20; 81 in the
+regression). Open `\tbd`s in Results/Method: think_trace paragraph (RQ4) and its Method sentence.
+Not compiled locally (no LaTeX on the dev box).
