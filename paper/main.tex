@@ -34,7 +34,7 @@
 
 \begin{abstract}
 When a language model makes a wrong step in a chain of reasoning, does the position of that step decide whether it recovers? Prior studies disagree, and their designs confound position with the number of steps that remain and with the final, answer-producing step. We plant errors at exact hop positions in models' own reasoning chains on 3- and 4-hop MuSiQue questions, resume generation, and measure recovery against an uncorrupted resume of the same chain. We test Qwen3-8B with thinking off and on (same weights) and Llama-3.1-8B.
-Late intermediate errors are recovered less often than early ones, by 9--20 percentage points at three hops in every model and mode. For Qwen3 this is not a position effect as such. At a fixed number of remaining steps, position has no effect, and the next hop catches early and late errors equally often; late errors simply leave fewer hops on which to recover.
+Late intermediate errors are recovered less often than early ones, by 9--20 percentage points at three hops in every model and mode. For Qwen3 this is not a position effect as such. At a fixed number of remaining steps, position has no detectable effect, and the next hop catches early and late errors equally often; late errors simply leave fewer hops on which to recover. Llama shows a residual position effect.
 Errors in the final hop are almost never recovered without thinking, and counting them as ``late'' would inflate the position effect 2.3--3.2-fold. Recovery is higher in thinking mode, but prefilling a hop summary inside the thinking block ends the model's deliberation, a pitfall for prefill-based studies. Almost all recoveries are silent. \tbd{one sentence on think\_trace if it works.}
 \end{abstract}
 
@@ -54,7 +54,7 @@ Our findings are as follows. Late intermediate errors are recovered \emph{less} 
 
 Our contributions are:
 (i)~to our knowledge, the first position-controlled error-injection study on multi-hop QA, with exact error positions obtained by aligning each model's own chain to the gold decomposition;
-(ii)~a design that separates the terminal step, and position from remaining steps, showing that late intermediate errors fail more often because fewer hops remain on which to recover;
+(ii)~a design that separates the terminal step and, through matched-remaining cells and within-question branching contrasts, tests Jia and Mu's conjecture~\cite{jiamu} that remaining steps drive the position gradient. For Qwen3 they do, but in the opposite direction: late intermediate errors fail more often because fewer hops remain on which to recover;
 (iii)~a same-weights comparison of thinking and non-thinking modes, together with a methodological caution: a hop summary prefilled inside the thinking block ends the model's deliberation;
 (iv)~a released, resumable injection harness \tbd{repository URL}.
 
@@ -183,7 +183,7 @@ with early $k{=}1$ and late $k{=}K{-}1$ ($k{=}2$ for $K{=}3$, $k{=}3$ for $K{=}4
 \label{sec:setup}
 
 \subsection{Models and inference}
-\textbf{Qwen3-8B}~\cite{qwen3}, 4-bit AWQ~\cite{awq} (\texttt{Qwen/Qwen3-8B-AWQ}, revision \texttt{4da05a8}), run with \texttt{enable\_thinking} off and on. Same weights in both modes, so the comparison isolates the thinking mode.
+\textbf{Qwen3-8B}~\cite{qwen3}, 4-bit AWQ~\cite{awq} (\texttt{Qwen/Qwen3-8B-AWQ}, revision \texttt{4da05a8}), run with \texttt{enable\_thinking} off and on. The weights are the same in both modes. Decoding follows each mode's recommended settings (Table~\ref{tab:decoding}), so sampling parameters and the token cap differ as well.
 \textbf{Llama-3.1-8B-Instruct}~\cite{llama3}, 4-bit AWQ (\texttt{hugging-quants/\allowbreak Meta-Llama-3.1-8B-\allowbreak Instruct-AWQ-INT4}, revision \texttt{db1f81a}), non-thinking only.
 Inference uses vLLM~\cite{vllm} 0.32.0 on one RTX 5070 (12\,GB), with an 8{,}192-token context. Each model--mode pair runs on one GPU for all of its conditions.
 
@@ -230,33 +230,42 @@ Clean twins correct & 97\% & 79\% & 88\% \\
 \end{table}
 
 \subsection{Statistical analysis}
-All confidence intervals are item-clustered percentile bootstraps (items resampled with replacement, 2{,}000 replicates). We report:
-\begin{itemize}
-\item $\RR$ per model $\times$ mode $\times K \times k \times$ error type, terminal hop in separate rows;
-\item $\PSI$ per model $\times$ mode $\times$ error type $\times K$ with 95\% CIs; a position effect is declared \emph{absent} if the 90\% CI lies within $\pm5$ percentage points (equivalent to two one-sided tests at $\alpha=0.05$);
-\item exact McNemar tests on paired early vs.\ late outcomes of the same item (both clean twins correct), per model $\times$ mode $\times$ error type $\times K$, Holm-adjusted across these tests;
-\item matched-remaining contrasts on linear chains (items resampled independently within each $K$);
-\item terminal vs.\ pooled intermediate recovery;
-\item one logistic regression on intermediate inject cells with a correct clean twin,
-\begin{align*}
-\text{correct} \sim{} & \text{rel\_pos}\times\text{mode} + \text{remaining} + K \\
- & + \text{error\_type} + \text{difficulty} \,(+\, \text{model}),
-\end{align*}
-with standard errors clustered by item and variance inflation factors reported, since rel\_pos, remaining and $K$ are partly collinear by construction;
-\item on all items, within-item contrasts between positions with equal remaining steps (branching shapes), and per model and mode a comparison of logistic models with relative position or remaining steps added to chain shape, error type and difficulty, by AIC;
-\item exploratory: for non-thinking runs, the first later hop whose answer again matches the gold hop (same matching rule as eligibility), and whether the next sub-question carries the planted value.
-\end{itemize}
+All confidence intervals are item-clustered percentile bootstraps (2{,}000 replicates).
+We report $\RR$ per model, mode, $K$, $k$ and error type, with the terminal hop kept separate.
+We report $\PSI$ per model, mode, error type and $K$; a position effect counts as \emph{absent} only if its 90\% CI lies within $\pm5$ percentage points (two one-sided tests at $\alpha=0.05$).
+Paired early and late outcomes of the same item get exact McNemar tests, Holm-adjusted.
+We also report matched-remaining and terminal-vs-intermediate contrasts.
+A logistic regression on intermediate cells (correct $\sim$ rel\_pos $\times$ mode + remaining + $K$ + error type + difficulty + model) uses item-clustered standard errors and reports variance inflation factors.
+On all items we add within-item contrasts at equal remaining steps (branching shapes), and per model and mode an AIC comparison of logistic models that add relative position or remaining steps to chain shape, error type and difficulty.
+Exploratory, for non-thinking runs only: the first later hop whose answer again matches the gold hop (the eligibility matching rule), and whether the next sub-question carries the planted value.
 Primary results use linear chains; all-item results and results excluding truncated runs are reported as robustness checks, since a truncated run counts as wrong and truncation could differ by position. Before the main runs we ran a pilot of 50 dev items per mode and required clean-twin accuracy of about 90\% (lower would mean resumption itself is broken). In the pilot, clean twins were correct in 7/7 non-thinking and 31/32 thinking cells. In the main runs the thinking mode fell below this target (Section~\ref{sec:results}).
 
 % ======================================================================
 \section{Results}
 \label{sec:results}
-Unless stated otherwise, numbers are for linear chains, $\RR$ is conditioned on a correct clean twin, and brackets give 95\% item-bootstrap CIs. All-item results agree in sign and size with every linear result below. Truncation is below 3\% in every cell, and excluding truncated runs changes no $\PSI$ by more than 0.003. Four-hop non-thinking sets are small (33 linear items for Qwen3, 15 for Llama), so their contrasts have wide intervals.
+Unless stated otherwise, numbers are for linear chains, $\RR$ is conditioned on a correct clean twin, and brackets give 95\% item-bootstrap CIs. All-item results agree in sign and size with every linear result below. Truncation is below 3\% in every cell, and excluding truncated runs changes no $\PSI$ by more than 0.003. Four-hop non-thinking sets are small (33 linear items for Qwen3, 15 for Llama), so their contrasts have wide intervals. Table~\ref{tab:hyp} summarizes the outcome for each hypothesis.
+
+\begin{table}[t]
+\centering
+\caption{Outcome of the hypotheses stated before the main runs.}
+\label{tab:hyp}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lp{0.78\columnwidth}}
+\toprule
+H1 & \textbf{Refuted.} Late intermediate errors are recovered \emph{less} ($\PSI<0$ in all 12 cells). \\
+H2 & \textbf{Supported for Qwen3}, not for Llama: no detectable position effect at fixed remaining steps. \\
+H3 & \textbf{Supported.} Lowest recovery at the terminal hop; pooling it inflates $\PSI$ 2.3--3.2-fold. \\
+H4 & \textbf{Partly.} Recovery is higher in thinking mode, but $\PSI$ is unchanged (little post-error deliberation). \\
+H5 & \textbf{Supported, small} ($\beta=0.15$); plausibility also differs between the two error types. \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.92\textwidth]{figures/recovery_linear_paper.png}
-\caption{Recovery rate by corrupted hop $k$ (linear chains; 95\% item-bootstrap CIs). Hollow markers: terminal hop, analyzed separately. Recovery falls from early to late intermediate hops in every panel and collapses at the terminal hop without thinking.}
+\caption{Recovery rate by corrupted hop $k$ (linear chains; 95\% item-bootstrap CIs). Hollow markers: terminal hop, analyzed separately. Recovery falls from early to late intermediate hops in every panel and collapses at the terminal hop without thinking. The $K{=}4$ non-thinking panels rest on few items (33 for Qwen3, 15 for Llama).}
 \label{fig:recovery}
 \end{figure*}
 
@@ -294,13 +303,13 @@ Because many planted values are implausible (Section~\ref{sec:method}), we recom
 \subsection{RQ2: Position or remaining steps?}
 \label{sec:res-rq2}
 On linear chains position and remaining steps move together, and the joint regression on those chains cannot split the effect between them (Table~\ref{tab:logit}; variance inflation factors 87 and 104). Three analyses separate them.
-First, in branching items some hops at different positions have the same number of dependent later hops: in 3hop2, hops 1 and 2 both feed only hop 3. Within the same item, recovery at the later of two such positions minus the earlier one is $+0.05$ [$-0.02$, $0.12$] for Qwen3 without thinking (114 items) and $-0.01$ [$-0.10$, $0.08$] with thinking (42 items). Llama, however, still recovers less at the later position ($-0.12$ [$-0.22$, $-0.02$], 69 items).
+First, in branching items some hops at different positions have the same number of dependent later hops: in 3hop2, hops 1 and 2 both feed only hop 3. Within the same item, recovery at the later of two such positions minus the earlier one is $+0.05$ [$-0.02$, $0.12$] for Qwen3 without thinking (114 items) and $-0.01$ [$-0.10$, $0.08$] with thinking (42 items). Llama, however, still recovers less at the later position ($-0.12$ [$-0.22$, $-0.02$], 69 items). This need not be position as such. In 3hop2, an error at hop 1 is separated by an unrelated hop from the hop that uses it, whereas an error at hop 2 feeds that hop directly, so the distance to the consuming hop differs too.
 Second, the matched-remaining contrasts on linear chains (same steps left, different absolute position) give differences of $-0.04$ to $+0.05$ for Qwen3 without thinking, although the four-hop cells hold only about 32 items.
 Third, logistic models on all items that control for chain shape favour remaining steps over relative position for Qwen3 without thinking ($\Delta$AIC $=13.6$). In the joint model, remaining steps are significant ($\beta=0.75$, $p<0.001$) and relative position is not ($p=0.76$). For Llama and for Qwen3 with thinking, the two fit equally well ($\Delta$AIC $<2$).
 For Qwen3, then, late-stage fragility follows the number of steps left after the error, not position itself. For Llama, the evidence leaves room for a position effect of its own.
 
 \textbf{Why fewer remaining steps hurt (exploratory).} Reading the non-thinking continuations hop by hop shows the mechanism. After an error at hop $k$, we record the first later hop whose answer matches the gold hop again.
-At $K{=}3$, Qwen3 gets back on track at the first hop after the error equally often for early and late errors (0.50 after hop 1, 0.51 after hop 2). Early errors recover more only because a second later hop catches a further 38\% of the remaining cases.
+At $K{=}3$, Qwen3 gets back on track at the first hop after the error equally often for early and late errors (0.50 after hop 1, 0.51 after hop 2). These rates pool both error types and use the hop-matching rule, which is looser than the exact match behind $\RR$, so they differ slightly from the recovery rates above. Early errors recover more only because a second later hop catches a further 38\% of the remaining cases.
 Llama is even more likely to get back on track at the first chance after a late error (0.58 vs.\ 0.39), but it too lacks the second chance, which catches 53\% for early errors.
 Late errors are thus not harder to notice; they leave fewer hops on which to notice them.
 The error usually propagates first. At $K{=}3$, Qwen3 writes the planted value into the next sub-question in 62--68\% of cells and Llama in 33--41\%. When it does, Qwen3 recovers in 46\% of cells, against 90\% when the next sub-question already uses the true value.
@@ -308,15 +317,15 @@ This may reconcile our result with the early-error findings of~\cite{vonrecum,ji
 
 \begin{table}[t]
 \centering
-\caption{Logistic regression of recovery on intermediate inject cells with a correct clean twin (linear chains; 5{,}670 cells, 1{,}177 items; item-clustered SEs). VIF: variance inflation factor.}
+\caption{Logistic regression of recovery on intermediate inject cells with a correct clean twin (linear chains; 5{,}670 cells, 1{,}177 items; item-clustered SEs). VIF: variance inflation factor. $^\dagger$Not interpretable: rel\_pos and remaining are near-collinear on linear chains; Section~\ref{sec:res-rq2} separates them.}
 \label{tab:logit}
 \small
 \begin{tabular}{lrrrr}
 \toprule
 Term & $\beta$ & SE & $p$ & VIF \\
 \midrule
-rel\_pos & $-3.67$ & 1.62 & 0.023 & 87 \\
-remaining & $-0.58$ & 0.52 & 0.27 & 104 \\
+\textcolor{gray}{rel\_pos$^\dagger$} & \textcolor{gray}{$-3.67$} & \textcolor{gray}{1.62} & \textcolor{gray}{0.023} & \textcolor{gray}{87} \\
+\textcolor{gray}{remaining$^\dagger$} & \textcolor{gray}{$-0.58$} & \textcolor{gray}{0.52} & \textcolor{gray}{0.27} & \textcolor{gray}{104} \\
 $K$ & $0.23$ & 0.30 & 0.44 & 11 \\
 mode = thinking & $1.52$ & 0.32 & $<$0.001 & 13 \\
 rel\_pos $\times$ thinking & $-0.24$ & 0.54 & 0.66 & 14 \\
@@ -340,7 +349,7 @@ These comparisons concern a thinking mode in which the model barely deliberates 
 Off-context swaps, which nothing in the context supports, are recovered slightly more often than in-context distractors ($\beta=+0.15$, $p=0.002$; e.g., Qwen3 without thinking at $K{=}3$, $k{=}1$: 0.70 vs.\ 0.62). The difference is small next to the effects of position, the terminal hop and thinking. With thinking it is inconsistent in sign, and at Llama's terminal hop it reverses (0.15 in-context vs.\ 0.07 off-context).
 
 \subsection{How recovery happens}
-Recovery is almost always silent. A rule-based labeler calls a recovery \emph{explicit} if a doubt or correction marker (e.g., ``wait'', ``actually'', ``incorrect'', ``should be'') occurs in the same or the next sentence as the planted or the true hop value, and \emph{silent} otherwise. It marks none of Qwen3's non-thinking recoveries and 0.2\% of its thinking recoveries as explicit; Llama flags the error in 9\% of its intermediate-hop recoveries. Typically the model simply writes the correct entity in a later hop or in its restated chain, without commenting on the planted value. Doubt markers do not indicate success: Llama uses them more often when it fails (15\%) than when it recovers (12\%). These labels are rule-based and were not validated by hand beyond spot checks.
+Recovery is almost always silent. A rule-based labeler calls a recovery \emph{explicit} if a doubt or correction marker (e.g., ``wait'', ``actually'', ``incorrect'', ``should be'') occurs in the same or the next sentence as the planted or the true hop value, and \emph{silent} otherwise. It marks none of Qwen3's non-thinking recoveries and 0.2\% of its thinking recoveries as explicit; Llama flags the error in 9\% of its intermediate-hop recoveries. Typically the model simply writes the correct entity in a later hop or in its restated chain, without commenting on the planted value. These labels are rule-based and were not validated by hand beyond spot checks.
 
 \section{Limitations}
 \textbf{Models.} We test two 8B models in 4-bit AWQ quantization. Larger or unquantized models may recover differently, and Fragile Thoughts~\cite{fragile} finds that scale partly protects against perturbations, though not for every error type.

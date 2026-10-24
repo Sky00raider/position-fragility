@@ -551,3 +551,18 @@ New paper figure `fig_recovery_paper` (analysis.py; columns = model x mode, rows
 written as `figures/recovery_<subset>_paper.png` by every analysis run; Fig. 2 now uses it (addresses
 the Gemini review's legibility point). Result: 8 pages, page 8 completely full: the think_trace
 paragraph will push to 9, so final trimming waits for the venue's page limit.
+
+### Third review (Opus 5.5): evaluated, mostly applied **[paper]**
+2026-10-24. Applied: abstract "no effect" → "no detectable effect" for Qwen3 + Llama residual effect
+(+0.05 [−0.02, 0.12] does not pass our ±5 pp equivalence rule); Table IV rel_pos/remaining greyed with a
+"not interpretable, see VI-C" footnote; mechanism rates labelled as pooled over error types and using
+the looser hop-matching rule (why 0.51 ≠ RR 0.48/0.50); contribution (ii) now says we TEST Jia & Mu's
+remaining-steps conjecture (direction opposite: more steps = more recovery here); alternative for
+Llama's branching effect (distance to the consuming hop differs in 3hop2); modes differ in decoding,
+not only thinking; hypothesis-outcome table (H1 refuted, H2 Qwen yes/Llama no, H3 yes, H4 partly,
+H5 small); cut the untested Llama doubt-marker comparison; Fig. 2 caption notes K=4 nothink n=33/15;
+statistics section condensed from a bullet list to a paragraph (back to 8 pages, a few lines slack).
+Not applied: "2.3–3.2-fold is wrong" — reviewer divided rounded values; unrounded ratios are
+2.27/2.55/3.15/3.19, so 2.3–3.2 stands. References were already all checked against arXiv.
+Team decisions raised: second human rater (human-human κ), venue rules (double-blind → remove
+affiliation, repo URL, "timestamped commit"), contribution (iii) rewrite if think_trace fails.
