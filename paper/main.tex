@@ -26,7 +26,7 @@
 \maketitle
 
 \begin{abstract}
-\tbd{abstract, after results}
+When a language model makes a wrong step in a chain of reasoning, does the position of that step decide whether the model recovers? Prior studies disagree, and their designs confound position with the number of steps that remain and with the final, answer-producing step. We plant controlled errors at exact hop positions in models' own reasoning chains on 3- and 4-hop MuSiQue questions, resume generation from the corrupted chain, and measure recovery relative to an uncorrupted resume of the same chain. We test Qwen3-8B with thinking off and on (same weights) and Llama-3.1-8B, using two error types and 384--922 eligible items per model and mode. Late intermediate errors are recovered 9--26 percentage points less often than early ones, with this late-stage fragility appearing in every model and mode. An error in the final hop is almost never recovered without thinking (at most 15\%), so pooling it with ``late'' errors would overstate the position effect. Position and remaining steps cannot be separated statistically in this design. Thinking raises recovery (0.82 vs.\ 0.58 at intermediate hops) but does not change the position effect, and almost all recoveries are silent. We also find that prefilling a hop summary inside the thinking block ends deliberation, a pitfall for prefill-based studies of reasoning models. \tbd{one sentence on think\_trace if it works.}
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -35,15 +35,43 @@ chain-of-thought, error propagation, multi-hop question answering, reasoning mod
 
 % ======================================================================
 \section{Introduction}
-\todo{three-way disagreement (ASCoT late~\cite{ascot}, von Recum early~\cite{vonrecum}, Jia \& Mu early but confounded~\cite{jiamu}); why position matters for where to verify in agent pipelines; contributions: (i) first position-controlled injection study on multi-hop QA, (ii) design separating position, remaining steps and the terminal step, (iii) same-weights thinking toggle, (iv) released harness.}
+Language models answer multi-step questions by chaining intermediate results, and any step can go wrong. Whether a wrong step ruins the answer depends on whether the model later notices or works around it. If errors at some positions are reliably recovered and errors at others are not, step-level verification~\cite{lightman} and checks in agent pipelines should concentrate where recovery fails. Knowing \emph{where} a wrong step hurts most therefore has practical value.
+
+Prior studies disagree on the answer. Von Recum et al.~\cite{vonrecum} intervene in reasoning models' own chains at fixed points and find that early interventions hurt more. Jia and Mu~\cite{jiamu} perturb one step and let the model continue. They find that error propagation falls from 33.5\% for early steps to 22.5\% for late ones, but call the gradient ``partly mechanical'': earlier steps have more steps left after them, and task difficulty dominates. ASCoT~\cite{ascot} reports the opposite, \emph{late-stage fragility}, for Qwen2.5-7B on GSM8K. Its largest accuracy drops, however, come from corrupting the final step (52 points at step 4 of 4), which produces the answer directly. These designs leave three variables entangled: the position of the error, the number of steps that remain after it, and whether the corrupted step is the terminal one. All three studies also use math, science or logic tasks, whose intermediate steps have no gold values, so an injected error's position and correctness are only approximate.
+
+We study error position in multi-hop question answering, where these variables can be controlled. Each MuSiQue~\cite{musique} question is composed of single-hop questions with gold intermediate answers. We keep items whose own chain matches the gold decomposition hop by hop, replace one hop's answer with a plausible wrong value, and let the model continue from the corrupted chain. Recovery is measured against an uncorrupted resume of the same chain. Crossing chain length (3 and 4 hops) with hop position yields pairs of errors that leave the same number of steps but sit at different positions. The terminal hop is analyzed separately. Qwen3-8B~\cite{qwen3} runs with thinking off and on using the same weights, and Llama-3.1-8B~\cite{llama3} serves as a second non-thinking model.
+
+Our findings are as follows. Late intermediate errors are recovered \emph{less} often than early ones in every model and mode, by 9 to 26 percentage points where the confidence interval excludes zero. Late-stage fragility therefore holds even with the terminal step excluded, contrary to our pre-stated hypothesis. Terminal-hop errors are almost never recovered without thinking: the models copy the wrong value into their answer. Position and remaining steps cannot be separated statistically, because the two are nearly collinear in any design built on 3- and 4-hop chains. Thinking raises recovery substantially but leaves the position effect unchanged. Finally, recovery is almost always silent: the model writes the correct value later without remarking on the planted one.
+
+Our contributions are:
+(i)~to our knowledge, the first position-controlled error-injection study on multi-hop QA, with exact error positions obtained by aligning each model's own chain to the gold decomposition;
+(ii)~a design that separates the terminal step and compares errors with matched remaining steps, showing late-stage fragility on intermediate hops;
+(iii)~a same-weights comparison of thinking and non-thinking modes, together with a methodological caution: a hop summary prefilled inside the thinking block ends the model's deliberation;
+(iv)~a released, resumable injection harness \tbd{repository URL}.
 
 % ======================================================================
 \section{Related Work}
-\todo{doc \S12 outline: multi-hop QA and shortcuts; CoT and thinking modes; errors and self-correction; interventions on CoT; position of errors; position effects in the input.}
+\textbf{Multi-hop QA.} HotpotQA~\cite{hotpotqa} and 2WikiMultiHopQA~\cite{twowiki} pose questions that require combining facts from several paragraphs, but many can be answered through shortcuts. MuSiQue~\cite{musique} composes questions from single-hop questions and filters out shortcut-solvable ones, which gives gold intermediate answers for every hop. Models often answer the sub-questions correctly but fail to compose them (the compositionality gap~\cite{press}). CRiT-QA~\cite{critqa} swaps counterfactual entities into the reasoning chain and adds distractor paths that diverge at different hops. It tests robustness to errors in the \emph{input}, whereas we place errors in the model's own reasoning.
+
+\textbf{Chain-of-thought and thinking modes.} Chain-of-thought prompting~\cite{cot} elicits intermediate steps. Reasoning models trained with reinforcement learning, such as DeepSeek-R1~\cite{deepseekr1}, produce long deliberations before answering. Qwen3~\cite{qwen3} offers both modes in one set of weights, which lets us compare them without changing the model.
+
+\textbf{Errors and self-correction.} Without external feedback, models rarely fix their own reasoning~\cite{huang}. They struggle to locate errors but can often correct an error once its location is given~\cite{tyen}. Process supervision trains verifiers to check each step~\cite{lightman}. Our results bear on where such checks matter most.
+
+\textbf{Interventions on chains of thought.} Editing or truncating a chain and observing the answer is a standard probe of whether the answer depends on the stated reasoning~\cite{lanham}. Explanations can be unfaithful to the factors that actually drive the answer~\cite{turpin,chen2025}. Yee et al.~\cite{yee} find that models often reach the correct answer despite invalid reasoning text (unfaithful recovery), and that faithful and unfaithful recovery respond differently to how obvious the error is. Separately, Fragile Thoughts~\cite{fragile} compares perturbation types across 13 models. The three studies of error position discussed in the introduction~\cite{vonrecum,jiamu,ascot} belong to this family. We add a task with exact hop positions, a separate terminal step, and matched remaining steps.
+
+\textbf{Position effects in the input.} Position also matters on the input side. Models use information in the middle of long contexts less well~\cite{lostmiddle}, are sensitive to the order of premises~\cite{premiseorder}, and are distracted by irrelevant context~\cite{distract}. Our in-context error type draws on this last finding: it plants a value taken from the shown distractor paragraphs.
 
 % ======================================================================
 \section{Research Questions}
-\todo{RQ1--RQ5 and hypotheses H1--H5 from the design doc \S1; equivalence margin $\pm$5 pp.}
+We stated the following questions and hypotheses before the main runs. All concern recovery from a single planted error (Section~\ref{sec:method}).
+\begin{itemize}
+\item \textbf{RQ1 (position).} Does the position of an intermediate error affect recovery? \emph{H1:} early errors propagate more, so recovery rises with relative position ($\PSI>0$).
+\item \textbf{RQ2 (remaining steps).} Is a position effect explained by the number of steps that remain? \emph{H2:} in contrasts with matched remaining steps, the position effect shrinks toward zero.
+\item \textbf{RQ3 (terminal step).} Is the answer-producing hop special? \emph{H3:} terminal-hop errors have the lowest recovery for every model, and pooling them with late errors changes the size or sign of $\PSI$.
+\item \textbf{RQ4 (thinking).} Does thinking change the level or the shape of the position curve? \emph{H4:} with the same weights, thinking raises recovery and shrinks $|\PSI|$.
+\item \textbf{RQ5 (error type).} Do plausible errors hurt more? \emph{H5:} in-context distractors are recovered less often than off-context swaps.
+\end{itemize}
+A position effect is declared absent only if its 90\% CI lies within $\pm$5 percentage points. Whether recovery is explicit or silent is analyzed as an exploratory question.
 
 % ======================================================================
 \section{Method}
@@ -287,10 +315,22 @@ Off-context swaps, which nothing in the context supports, are recovered slightly
 Recovery is almost always silent. A rule-based labeler calls a recovery \emph{explicit} if a doubt or correction marker (e.g., ``wait'', ``actually'', ``incorrect'', ``should be'') occurs in the same or the next sentence as the planted or the true hop value, and \emph{silent} otherwise. It marks none of Qwen3's non-thinking recoveries and 0.2\% of its thinking recoveries as explicit; Llama flags the error in 9\% of its intermediate-hop recoveries. Typically the model simply writes the correct entity in a later hop or in its restated chain, without commenting on the planted value. Doubt markers do not indicate success: Llama uses them more often when it fails (15\%) than when it recovers (12\%). These labels are rule-based and were not validated by hand beyond spot checks.
 
 \section{Limitations}
-\todo{4-bit 8B models only; planted vs.\ natural errors; position/remaining/$K$ dependence; one sample per cell (binary item difficulty); English Wikipedia; possible contamination (closed-book filter only); spaCy type tags (audit numbers); thinking-mode prefix placement.}
+\textbf{Models.} We test two 8B models in 4-bit AWQ quantization. Larger or unquantized models may recover differently, and Fragile Thoughts~\cite{fragile} finds that scale partly protects against perturbations, though not for every error type.
+
+\textbf{Planted errors.} Our errors are substituted values of the right type, not mistakes the model made itself. Natural errors may be correlated with item difficulty in ways planted ones are not. Type tags come from spaCy and regular expressions; \tbd{hand-audit results}.
+
+\textbf{Position and remaining steps.} On linear chains, position, remaining steps and chain length are tied together ($k$ + remaining $= K$). The matched-remaining contrasts address this only partly, and four-hop items rarely pass eligibility without thinking (33 and 15 linear items), so those contrasts are underpowered.
+
+\textbf{Selection.} Eligibility keeps items that a model answers correctly along MuSiQue's decomposition and cannot answer closed-book (8--18\% of attempted items). Results therefore describe errors on solvable, gold-aligned items. Different modes are eligible on different items; the shared-item analysis covers only 83 linear items.
+
+\textbf{Thinking-mode prefill.} With the hop summary prefilled inside the think block, Qwen3 stops deliberating: continuations are about 110 tokens, and clean twins succeed at only 68--86\% of intermediate hops. Our thinking-mode comparison is therefore between non-thinking generation and a thinking format with little deliberation after the error. Clean-twin conditioning further restricts it to items the model can finish without deliberating. \tbd{update after think\_trace.}
+
+\textbf{Measurement.} Each cell has one sample, so item difficulty is binary. Exact match counts answers at a different granularity as wrong. Explicit and silent recovery labels are rule-based and were not validated by hand. The thinking-mode cap of 4{,}096 tokens excluded 3\% of baselines.
+
+\textbf{Data.} MuSiQue is built from English Wikipedia, which the models have likely seen in training. The closed-book filter removes only items a model answers from memory.
 
 \section{Conclusion}
-\todo{}
+We planted errors at exact hop positions in models' own multi-hop reasoning and measured how often the models recover. In both models and both modes, late intermediate errors are recovered less often than early ones. This late-stage fragility holds even when the answer-producing hop is excluded; that hop is a separate case, almost never recovered without thinking. The effect is consistent with the number of remaining steps but cannot be separated from it in chains of three and four hops. Thinking raises recovery without flattening the position effect, and recovery is almost always silent. For verification in multi-step pipelines, these results suggest checking late steps, and the final step above all, rather than the first. For studies that prefill reasoning models, they show that where the prefix is placed decides whether the model deliberates at all. \tbd{revise the thinking sentence after think\_trace.}
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}

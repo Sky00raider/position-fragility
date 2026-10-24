@@ -388,3 +388,17 @@ single RTX 5070, pilot clean-twin outcome, main-run truncation. Numbers checked 
 excluding truncated runs moves PSI by ≤ 0.003; shared linear items = 83 (63 + 20; 81 in the
 regression). Open `\tbd`s in Results/Method: think_trace paragraph (RQ4) and its Method sentence.
 Not compiled locally (no LaTeX on the dev box).
+
+### Paper: Abstract, Intro, Related Work, RQs, Limitations, Conclusion drafted **[paper]**
+2026-10-24. All `\todo`s gone; 9 `\tbd`s remain (authors, repo URL, hand audit ×2, think_trace ×5).
+Checked the key papers on arXiv and fixed their bib entries (jiamu, vonrecum, ascot, fragile, critqa,
+yee title/authors); lanham, chen2025, yee venue still `% VERIFY`. Facts that shape the framing:
+- **ASCoT** (Zhang et al.): late-stage fragility from Qwen2.5-7B on GSM8K (Table 4). Biggest drops are
+  at the *final* step (4/4: −51.7 pp; 3/3: −56.8 pp), i.e. the terminal step, but intermediate steps
+  also go late > early (2/4 −14.6 vs 3/4 −29.6). Its appendix E.2 numbers disagree with Table 4.
+- **Jia & Mu**: propagation early 33.5% → middle 27.4% → late 22.5% (§5.3); they call it "partly
+  mechanical" (remaining steps) with difficulty dominant (App. J).
+- **von Recum et al.** (Girrbach, Akata; ICLR 2026): early interventions hurt more; doubt drives recovery.
+So our intermediate-hop late-stage fragility agrees with ASCoT's intermediate steps and disagrees with
+the other two. Draft is ~5.5k words incl. tables: may be long for a 6-page IEEE limit (venue limit
+not yet confirmed).
