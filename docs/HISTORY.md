@@ -514,3 +514,8 @@ pooling does, ASCoT); abstract, intro, conclusion, limitations updated. Still 8 
 Other review points not yet done: hedge thinking claim in abstract, "every model and mode" qualifier,
 soften pipeline advice, "stated before the runs" evidence (design doc commit c9dbf5a, Oct 22, not OSF),
 mechanism analysis (where the correct value reappears). Declined: dropping the small K=4 rows.
+- Hedges applied (same day): abstract/intro/conclusion now say the thinking condition has little
+  post-error deliberation, so it "tests a restated chain more than full reasoning"; "every model and
+  mode" → "all 12 cells; significant at three hops in every model and mode (9–20 pp)"; pipeline advice
+  conditioned on our narrow setting; RQ section cites the design-doc commit (c9dbf5a, 22 Oct 13:02,
+  H1–H5 unchanged since; main runs began 23 Oct 22:39) and says "not formally preregistered".
