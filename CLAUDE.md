@@ -16,7 +16,8 @@ Deadlines: experiments done **Oct 27 2026**, paper submitted **Oct 30 2026**.
 
 ## Out of scope: do not build
 GSM8K math arm, handoff condition, counterfactual subset, quantization check, LLM judge,
-multiple samples, Gemma, R1-Distill, Claude API, explicit/silent self-correction labels.
+multiple samples, Gemma, R1-Distill, Claude API. (Explicit/silent recovery is included only as a
+rule-based exploratory analysis, `sc_label` in analysis.py; no LLM judge, no human validation.)
 
 ## Design rules (do not break)
 1. **Inject into the model's OWN chain** via assistant-turn prefill. Never the gold template.
