@@ -294,6 +294,12 @@ Second, the matched-remaining contrasts on linear chains (same steps left, diffe
 Third, logistic models on all items that control for chain shape favour remaining steps over relative position for Qwen3 without thinking ($\Delta$AIC $=13.6$). In the joint model, remaining steps are significant ($\beta=0.75$, $p<0.001$) and relative position is not ($p=0.76$). For Llama and for Qwen3 with thinking, the two fit equally well ($\Delta$AIC $<2$).
 For Qwen3, then, late-stage fragility follows the number of steps left after the error, not position itself. For Llama, the evidence leaves room for a position effect of its own.
 
+\textbf{Why fewer remaining steps hurt (exploratory).} Reading the non-thinking continuations hop by hop shows the mechanism. After an error at hop $k$, we record the first later hop whose answer matches the gold hop again.
+At $K{=}3$, Qwen3 gets back on track at the first hop after the error equally often for early and late errors (0.50 after hop 1, 0.51 after hop 2). Early errors recover more only because a second later hop catches a further 38\% of the remaining cases.
+Llama is even more likely to get back on track at the first chance after a late error (0.58 vs.\ 0.39), but it too lacks the second chance, which catches 53\% for early errors.
+Late errors are thus not harder to notice; they leave fewer hops on which to notice them.
+The error usually propagates first. At $K{=}3$, Qwen3 writes the planted value into the next sub-question in 62--68\% of cells and Llama in 33--41\%. When it does, Qwen3 recovers in 46\% of cells, against 90\% when the next sub-question already uses the true value.
+
 \begin{table}[t]
 \centering
 \caption{Logistic regression of recovery on intermediate inject cells with a correct clean twin (linear chains; 5{,}670 cells, 1{,}177 items; item-clustered SEs). VIF: variance inflation factor.}

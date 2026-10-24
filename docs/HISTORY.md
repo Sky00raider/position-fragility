@@ -519,3 +519,19 @@ mechanism analysis (where the correct value reappears). Declined: dropping the s
   mode" → "all 12 cells; significant at three hops in every model and mode (9–20 pp)"; pipeline advice
   conditioned on our narrow setting; RQ section cites the design-doc commit (c9dbf5a, 22 Oct 13:02,
   H1–H5 unchanged since; main runs began 23 Oct 22:39) and says "not formally preregistered".
+
+### Mechanism: late errors get fewer chances, not a lower per-step catch rate (exploratory) **[result] [paper]**
+2026-10-24 (Sonnet review point 4). `recovery_locus` in `src/analysis.py` (non-thinking, linear,
+intermediate, clean twin correct; reads continuation hop lines k+1..K; "on track" = first later hop j
+whose answer passes `hop_answer_matches` vs gold hop j, aliases at j=K). Tables
+`recovery_locus_linear.csv` + `_cells_` in runs/analysis_main/tables (v1, standalone run; part of main()
+for v2). K=3:
+| | early (k=1): catch at 1st later hop | 2nd later hop (of the rest) | late (k=2): 1st (only) chance |
+|---|---|---|---|
+| Qwen nothink | 0.50 (n=1432) | 0.38 | 0.51 (n=1442) |
+| Llama nothink | 0.39 (n=692) | 0.53 | 0.58 (n=730) |
+→ same (Qwen) or higher (Llama) per-step catch for late errors; early errors win via the extra hop.
+Propagation: planted value appears in the hop k+1 sub-question in Qwen 62% (k=1) / 68% (k=2), Llama 41% /
+33%; Qwen RR 0.46 when it does vs 0.90 when the next sub-question uses the true value (Llama 0.54 / 0.82).
+Never back on track but correct: ≤4%. Caveat: "true in next question" may mark a model that had already
+ignored the error (not causal). Paper: paragraph at the end of RQ2. Still 8 pages.

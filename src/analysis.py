@@ -272,6 +272,72 @@ def position_vs_remaining(df) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
+def gold_hops_by_item() -> dict[str, list[str]]:
+    """item_id -> gold hop answers (from the prepared items)."""
+    from .store import read_jsonl
+    out = {}
+    for f in (REPO_ROOT / "data" / "items").glob("*.jsonl"):
+        for it in read_jsonl(f):
+            out[it["id"]] = [h["answer"] for h in it["hops"]]
+    return out
+
+
+def recovery_locus(df, gold_hops: dict | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Mechanism (exploratory): where does a non-thinking model get back on track after an error at hop k?
+    Linear items, intermediate hops, clean twin correct. Reads the continuation's hop lines k+1..K:
+      next_q   = does the hop k+1 sub-question carry the planted value, the true hop-k value, or neither
+      on_track = first later hop j whose answer matches gold hop j (hop_answer_matches; aliases at j=K)
+    Per-opportunity catch rate ("hazard") at the 1st and 2nd later hop compares early and late errors:
+    if it is similar, late errors fail more because they have fewer later hops to recover on."""
+    from .normalize import hop_answer_matches, normalize
+    from .parse import parse_hops
+    gold_hops = gold_hops if gold_hops is not None else gold_hops_by_item()
+    rec = recovery_rows(df[df["is_linear"] & ~df["is_terminal"] & (df["mode"] == "nothink")])
+    cells = []
+    for r in rec.to_dict("records"):
+        golds = gold_hops.get(r["item_id"])
+        if not golds or not r.get("continuation"):
+            continue
+        K, k = int(r["K"]), int(r["k"])
+        later = {h.n: h for h in parse_hops(r["continuation"]) if k < h.n <= K}
+        nxt = later.get(k + 1)
+        planted, true_vals = normalize(r["new_value"]), [normalize(r["orig_value"]), normalize(golds[k - 1])]
+        if nxt is None:
+            next_q = "missing"
+        elif planted and planted in normalize(nxt.question):
+            next_q = "planted"
+        elif any(v and v in normalize(nxt.question) for v in true_vals):
+            next_q = "true"
+        else:
+            next_q = "neither"
+        on_track = None
+        for j in range(k + 1, K + 1):
+            extra = [r["gold"], *r.get("gold_aliases", [])] if j == K else []
+            if j in later and hop_answer_matches(later[j].answer, [golds[j - 1], *extra]):
+                on_track = j
+                break
+        cells.append({**{c: r[c] for c in GROUP + ["item_id", "K", "k", "error_type", "correct"]},
+                      "next_q": next_q, "first_on_track": on_track,
+                      "opportunity": (on_track - k) if on_track else None})
+    cells = pd.DataFrame(cells)
+    out = []
+    if cells.empty:
+        return cells, pd.DataFrame(out)
+    for keys, g in cells.groupby(GROUP + ["K", "k"]):
+        n = len(g)
+        row = {**dict(zip(GROUP + ["K", "k"], keys)), "n": n, "RR": g["correct"].mean(),
+               **{f"next_q_{v}": (g["next_q"] == v).mean() for v in ("planted", "true", "neither", "missing")}}
+        at_risk = n
+        for opp in range(1, int(keys[-2]) - int(keys[-1]) + 1):   # later hops k+1..K
+            caught = int((g["opportunity"] == opp).sum())
+            row[f"hazard_{opp}"] = caught / at_risk if at_risk else np.nan
+            row[f"n_at_risk_{opp}"] = at_risk
+            at_risk -= caught
+        row["never_on_track_but_correct"] = (g["first_on_track"].isna() & g["correct"]).mean()
+        out.append(row)
+    return cells, pd.DataFrame(out)
+
+
 def mcnemar_table(df) -> pd.DataFrame:
     """Exact McNemar, early vs late on the same item (both clean twins correct), Holm-adjusted."""
     from statsmodels.stats.contingency_tables import mcnemar
@@ -664,6 +730,13 @@ def main(argv=None):
                        summ.round(3).to_string(index=False)]
             if name == "all":
                 sc_examples(lab, out / "silent_explicit_examples.txt")
+        # mechanism (exploratory): at which later hop non-thinking models get back on track
+        cells, locus = recovery_locus(df)
+        if not locus.empty:
+            cells.to_csv(tabs / "recovery_locus_cells_linear.csv", index=False)
+            locus.to_csv(tabs / "recovery_locus_linear.csv", index=False)
+            report += ["\n== where recovery happens (non-thinking, linear, intermediate) ==",
+                       locus.round(3).to_string(index=False)]
 
     # robustness: compare modes on the items eligible in both
     inter = intersection(df)
