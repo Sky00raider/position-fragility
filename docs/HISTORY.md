@@ -535,3 +535,19 @@ Propagation: planted value appears in the hop k+1 sub-question in Qwen 62% (k=1)
 33%; Qwen RR 0.46 when it does vs 0.90 when the next sub-question uses the true value (Llama 0.54 / 0.82).
 Never back on track but correct: ≤4%. Caveat: "true in next question" may mark a model that had already
 ignored the error (not causal). Paper: paragraph at the end of RQ2. Still 8 pages.
+
+### Paper read-through and rework (same day) **[paper]**
+Full read of main.tex after the review work. Changes: abstract rewritten (~210 words; leads with the
+"fewer chances" mechanism, 9–20 pp at three hops, 2.3–3.2× pooling inflation, thinking hedge); intro
+findings + contribution (ii) now state the branching/mechanism result; Method explains how branching
+shapes separate position from remaining; stats list gains the branching contrast, AIC comparison and
+the exploratory hop-by-hop analysis; removed an unsupported claim ("compare results across splits":
+never done) and an undefined "power analysis" reference; RQ1 no longer says we "contradict" [2],[3]:
+RQ2 adds an untested reconciliation (in math/logic later steps compute from earlier ones, so more steps
+= more spread; here each hop is looked up in supplied paragraphs, so more steps = more chances to
+re-ground); conclusion states the mechanism as a suggestion. Trims: Fig. 1 footnotesize, pilot-cap
+sentence, clean-twin audit detail, tag-robustness numbers.
+New paper figure `fig_recovery_paper` (analysis.py; columns = model x mode, rows = K; larger text),
+written as `figures/recovery_<subset>_paper.png` by every analysis run; Fig. 2 now uses it (addresses
+the Gemini review's legibility point). Result: 8 pages, page 8 completely full: the think_trace
+paragraph will push to 9, so final trimming waits for the venue's page limit.

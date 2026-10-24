@@ -590,6 +590,51 @@ def fig_recovery(rec: pd.DataFrame, path: Path, title: str):
     plt.close(fig)
 
 
+MODE_NAMES = {"nothink": "non-thinking", "think": "thinking", "think_trace": "thinking, trace"}
+
+
+def short_model(model: str) -> str:
+    return "Qwen3-8B" if "Qwen3" in model else ("Llama-3.1-8B" if "Llama" in model else model)
+
+
+def fig_recovery_paper(rec: pd.DataFrame, path: Path):
+    """Paper version of fig_recovery: one column per model x mode, rows K=3 and K=4, wide and short
+    (a two-column IEEE figure*), larger text, no title (the caption says it)."""
+    import matplotlib.pyplot as plt
+    order = sorted(rec.groupby(GROUP).groups, key=lambda mm: ("Llama" in mm[0], mm[1]))
+    fig, axes = plt.subplots(2, len(order), figsize=(3.1 * len(order), 4.4), squeeze=False, sharey=True)
+    for c, (model, mode) in enumerate(order):
+        g = rec[(rec["model"] == model) & (rec["mode"] == mode)]
+        for r, K in enumerate([3, 4]):
+            ax = axes[r][c]
+            _style(ax)
+            for et in ERROR_TYPES:
+                s = g[(g["K"] == K) & (g["error_type"] == et)].sort_values("k")
+                if s.empty:
+                    continue
+                inter, term = s[~s["is_terminal"]], s[s["is_terminal"]]
+                off = -0.07 if et == "in_context" else 0.07
+                ax.errorbar(inter["k"] + off, inter["RR"], yerr=[inter["RR"] - inter["ci_lo"], inter["ci_hi"] - inter["RR"]],
+                            color=COLORS[et], marker=MARKERS[et], ms=6, lw=1.8, capsize=0, elinewidth=1.1,
+                            label=et.replace("_", "-"))
+                ax.errorbar(term["k"] + off, term["RR"], yerr=[term["RR"] - term["ci_lo"], term["ci_hi"] - term["RR"]],
+                            color=COLORS[et], marker=MARKERS[et], ms=6, mfc="white", mew=1.8, lw=0, elinewidth=1.1)
+            ax.axvline(K - 0.5, color="#c9c8c3", lw=1, ls=":")
+            ax.set_xticks(range(1, K + 1), [f"{k}" + ("\nterm." if k == K else "") for k in range(1, K + 1)], fontsize=10)
+            ax.tick_params(axis="y", labelsize=10)
+            ax.set_ylim(0, 1.02)
+            ax.set_title(f"{short_model(model)}, {MODE_NAMES.get(mode, mode)}, K={K}", color=INK, fontsize=11)
+            if r == 1:
+                ax.set_xlabel("corrupted hop k", color=MUTED, fontsize=10)
+            if c == 0:
+                ax.set_ylabel("recovery rate", color=MUTED, fontsize=11)
+    handles, labels = axes[0][0].get_legend_handles_labels()
+    fig.legend(handles, labels, frameon=False, fontsize=11, loc="upper center", ncol=2, bbox_to_anchor=(0.5, 1.0))
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    fig.savefig(path, dpi=300)
+    plt.close(fig)
+
+
 def fig_forest(tab: pd.DataFrame, value: str, path: Path, title: str, label_cols: list[str], xlabel: str):
     import matplotlib.pyplot as plt
     if tab.empty:
@@ -699,6 +744,7 @@ def main(argv=None):
             if not rec.empty:
                 fig_recovery(rec, figs / f"recovery_{name}.png",
                              f"Recovery by corrupted hop ({name} items; terminal hop hollow)")
+                fig_recovery_paper(rec, figs / f"recovery_{name}_paper.png")
             fig_forest(psi, "PSI", figs / f"psi_{name}.png", f"PSI = RR_late − RR_early ({name} items)",
                        GROUP + ["error_type", "K"], "PSI (95% item-bootstrap CI)")
             pooled_t = psi_pooled_terminal_table(d, args.reps, rng)
