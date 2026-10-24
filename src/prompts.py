@@ -6,6 +6,8 @@ pipeline is identical on vLLM and HF (and Llama does not get a double BOS).
 """
 from __future__ import annotations
 
+import re
+
 from .parse import THINK_OPEN, Hop
 
 # v2 (after the GPU pilot, 2026-10-23): v1 let Qwen3-8B split questions into 5-11 hops and answer
@@ -72,6 +74,47 @@ def build_prefix(answer_text: str, hops: list[Hop], k: int, new_value: str | Non
     if new_value is not None:
         text = text[: h.ans_start] + new_value + text[h.ans_end:]
     return text.lstrip("\n ").rstrip() + "\n"
+
+
+# ---- trace injection (thinking mode, design doc §6.6 alternative; von Recum et al.) ----
+# The "hops" site prefills the model's tidy hop summary inside <think>; Qwen3 then treats its
+# reasoning as finished (median 110 new tokens, no deliberation). The "trace" site corrupts the
+# model's OWN thinking text instead: first mention of the hop-k answer, cut at the end of that
+# sentence, so the model resumes mid-thought and keeps reasoning.
+
+SENTENCE_END = re.compile(r"[.!?](?=\s|$)|\n")
+
+
+def _variants(s: str) -> list[str]:
+    s = re.sub(r"\([^)]*\)", " ", s).strip(" .,;:\"'*")
+    out = [s]
+    if s.lower().startswith("the "):
+        out.append(s[4:])
+    return [v for v in out if len(v) >= 2]
+
+
+def find_trace_mention(think_text: str, candidates: list[str]) -> tuple[int, int, str] | None:
+    """Earliest whole-word, case-insensitive mention of any candidate string in the thinking text.
+    Returns (start, end, matched text) or None."""
+    best = None
+    for c in candidates:
+        for v in _variants(c):
+            m = re.search(r"(?<!\w)" + re.escape(v) + r"(?!\w)", think_text, re.IGNORECASE)
+            if m and (best is None or m.start() < best[0]):
+                best = (m.start(), m.end(), m.group(0))
+    return best
+
+
+def build_trace_prefix(think_text: str, start: int, end: int, new_value: str | None = None) -> str | None:
+    """Thinking text up to the end of the sentence containing [start, end); the mention optionally
+    replaced. None if no sentence end follows (the mention is in the last, unfinished sentence)."""
+    m = SENTENCE_END.search(think_text, end)
+    if m is None:
+        return None
+    text = think_text[: m.end()]
+    if new_value is not None:
+        text = text[:start] + new_value + text[end:]
+    return text
 
 
 def prefill_text(prefix: str, think: bool) -> str:

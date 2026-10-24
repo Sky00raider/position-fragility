@@ -16,6 +16,7 @@ CIs are item-clustered bootstrap percentiles (resample items with replacement).
 from __future__ import annotations
 
 import argparse
+import itertools
 import re
 import sys
 import warnings
@@ -263,7 +264,7 @@ def flag_in(text: str, values: list) -> bool:
 def split_think(continuation: str, mode: str) -> tuple[str, str]:
     """(inside <think>, after </think>). Think-mode continuations start inside the think block."""
     c = continuation or ""
-    if mode != "think":
+    if not str(mode).startswith("think"):       # "think" (hop-summary site) and "think_trace"
         return "", c
     i = c.find("</think>")
     return (c, "") if i < 0 else (c[:i], c[i + len("</think>"):])
@@ -311,7 +312,7 @@ def sc_examples(lab, path: Path, n=10, seed=0):
     for label in ["explicit", "silent"]:
         g = lab[lab["sc_label"] == label]
         for _, r in g.sample(min(n, len(g)), random_state=seed).iterrows():
-            after = "after </think>" if r["mode"] == "think" else "in continuation"
+            after = "after </think>" if str(r["mode"]).startswith("think") else "in continuation"
             where = [w for w, f in [("inside <think>", r["flag_think"]), (after, r["flag_after"])] if f]
             lines += [f"===== {label.upper()}{' (' + ', '.join(where) + ')' if where else ''} | {r['model']} "
                       f"{r['mode']} | {r['item_id']} K={r['K']} k={r['k']} {r['error_type']}",
@@ -349,29 +350,36 @@ def intersection_n_table(df, inter) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
+MODE_ORDER = ["nothink", "think", "think_trace"]
+
+
 def mode_diff_table(df, reps, rng) -> pd.DataFrame:
-    """RR(think) - RR(nothink) on paired cells (item, k, error type) whose clean twin is correct in both
-    modes, per cell and pooled over intermediate / terminal hops."""
+    """RR(mode_b) - RR(mode_a) on paired cells (item, k, error type) whose clean twin is correct in both
+    modes, per cell and pooled over intermediate / terminal hops, for every pair of modes run.
+    Pairs: nothink vs think, nothink vs think_trace, think vs think_trace (same weights throughout)."""
     rec, out = recovery_rows(df), []
     for model, g in rec.groupby("model"):
-        if set(g["mode"]) != {"nothink", "think"}:
-            continue
-        p = g.pivot_table(index=["item_id", "K", "k", "error_type", "is_terminal"], columns="mode",
-                          values="correct", aggfunc="first").dropna().reset_index()
-        p["nothink"], p["think"] = p["nothink"].astype(float), p["think"].astype(float)
-        p["d"] = p["think"] - p["nothink"]
-        cells = [(K, str(k), et, s) for (K, k, et), s in p.groupby(["K", "k", "error_type"])]
-        for et in ERROR_TYPES + ["both"]:
-            s = p if et == "both" else p[p["error_type"] == et]
-            cells += [("all", "intermediate", et, s[~s["is_terminal"]]), ("all", "terminal", et, s[s["is_terminal"]])]
-        for K, k, et, s in cells:
-            if s.empty:
+        modes = [m for m in MODE_ORDER if m in set(g["mode"])]
+        for a, b in itertools.combinations(modes, 2):
+            p = g[g["mode"].isin([a, b])].pivot_table(index=["item_id", "K", "k", "error_type", "is_terminal"],
+                                                      columns="mode", values="correct", aggfunc="first")
+            p = p.dropna().reset_index()
+            if p.empty:
                 continue
-            by_item = s.groupby("item_id")["d"].apply(list).to_dict()
-            lo, hi = boot_ci(np.array(list(by_item)), lambda x: rate_on(x, by_item), reps, rng)
-            out.append({"model": model, "K": K, "k": k, "error_type": et, "n_cells": len(s), "n_items": len(by_item),
-                        "RR_nothink": s["nothink"].mean(), "RR_think": s["think"].mean(),
-                        "diff_think_minus_nothink": s["d"].mean(), "ci_lo": lo, "ci_hi": hi})
+            p[a], p[b] = p[a].astype(float), p[b].astype(float)
+            p["d"] = p[b] - p[a]
+            cells = [(K, str(k), et, s) for (K, k, et), s in p.groupby(["K", "k", "error_type"])]
+            for et in ERROR_TYPES + ["both"]:
+                s = p if et == "both" else p[p["error_type"] == et]
+                cells += [("all", "intermediate", et, s[~s["is_terminal"]]), ("all", "terminal", et, s[s["is_terminal"]])]
+            for K, k, et, s in cells:
+                if s.empty:
+                    continue
+                by_item = s.groupby("item_id")["d"].apply(list).to_dict()
+                lo, hi = boot_ci(np.array(list(by_item)), lambda x: rate_on(x, by_item), reps, rng)
+                out.append({"model": model, "mode_a": a, "mode_b": b, "K": K, "k": k, "error_type": et,
+                            "n_cells": len(s), "n_items": len(by_item), "RR_a": s[a].mean(), "RR_b": s[b].mean(),
+                            "diff_b_minus_a": s["d"].mean(), "ci_lo": lo, "ci_hi": hi})
     return pd.DataFrame(out)
 
 
@@ -447,8 +455,8 @@ def fig_forest(tab: pd.DataFrame, value: str, path: Path, title: str, label_cols
     plt.close(fig)
 
 
-MODE_COLORS = {"nothink": "#2a78d6", "think": "#eb6834"}        # same validated slots 1-2
-MODE_MARKERS = {"nothink": "o", "think": "s"}
+MODE_COLORS = {"nothink": "#2a78d6", "think": "#eb6834", "think_trace": "#1baf7a"}   # validated slots 1-3
+MODE_MARKERS = {"nothink": "o", "think": "s", "think_trace": "^"}
 
 
 def fig_mode_compare(rec: pd.DataFrame, path: Path, title: str):
@@ -457,12 +465,13 @@ def fig_mode_compare(rec: pd.DataFrame, path: Path, title: str):
     fig, axes = plt.subplots(1, 2, figsize=(9, 3.4), sharey=True)
     for ax, K in zip(axes, [3, 4]):
         _style(ax)
-        for mode in ["nothink", "think"]:
+        modes = [m for m in MODE_ORDER if m in set(rec["mode"])]
+        for i, mode in enumerate(modes):
             s = rec[(rec["K"] == K) & (rec["mode"] == mode)].sort_values("k")
             if s.empty:
                 continue
             inter, term = s[~s["is_terminal"]], s[s["is_terminal"]]
-            off = -0.06 if mode == "nothink" else 0.06
+            off = 0.08 * (i - (len(modes) - 1) / 2)
             ax.errorbar(inter["k"] + off, inter["RR"], yerr=[inter["RR"] - inter["ci_lo"], inter["ci_hi"] - inter["RR"]],
                         color=MODE_COLORS[mode], marker=MODE_MARKERS[mode], ms=7, lw=2, capsize=0, elinewidth=1.2,
                         label=mode)
@@ -479,7 +488,7 @@ def fig_mode_compare(rec: pd.DataFrame, path: Path, title: str):
         ax.set_xlabel("corrupted hop k", color=MUTED)
     axes[0].set_ylabel("recovery rate", color=MUTED)
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, frameon=False, fontsize=9, loc="upper right", ncol=2)
+    fig.legend(handles, labels, frameon=False, fontsize=9, loc="upper right", ncol=3)
     fig.suptitle(title, color=INK, fontsize=11, x=0.01, ha="left")
     fig.tight_layout(rect=(0, 0, 1, 0.93))
     fig.savefig(path, dpi=200)

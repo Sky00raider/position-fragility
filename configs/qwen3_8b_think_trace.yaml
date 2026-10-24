@@ -1,0 +1,7 @@
+# Thinking mode, error planted in the model's OWN thinking text (mid-thought), not in the prefilled
+# hop summary. Same items, baseline and decoding as qwen3_8b_think; only inject/continue/score differ.
+# Why: with the hop-summary prefill Qwen3 stops deliberating (median 110 new tokens), see HISTORY 2026-10-24.
+extends: qwen3_8b_think.yaml
+run_name: qwen3_8b_think_trace
+injection_site: trace
+reuse_baseline_from: qwen3_8b_think

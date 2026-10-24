@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import itertools
 import re
+import shutil
 import sys
 import time
 from collections import Counter
@@ -24,7 +25,8 @@ from .config import Config, load_config
 from .inject import build_off_pool, pick_value
 from .normalize import exact_match, hop_answer_matches, max_f1, normalize
 from .parse import extract_final, hops_well_formed, parse_hops, split_think
-from .prompts import build_ids, build_prefix, prefill_text, user_message
+from .prompts import (build_ids, build_prefix, build_trace_prefix, find_trace_mention, prefill_text,
+                      user_message)
 from .store import append_jsonl, cell_key, cell_seed, done_keys, git_hash, read_jsonl, write_jsonl
 
 
@@ -78,6 +80,14 @@ def generate_cells(cfg: Config, cells: list[dict], out_path, step: str) -> None:
 def cmd_baseline(args):
     """Own clean chain (with paragraphs) + closed-book run, one sample each."""
     cfg = load_config(args.config)
+    if cfg.reuse_baseline_from and not (cfg.run_dir / "baseline.jsonl").exists():
+        # same model, mode, prompt and items: reuse the existing baseline instead of regenerating it
+        src = cfg.run_dir.parent / cfg.reuse_baseline_from / "baseline.jsonl"
+        if not src.exists():
+            sys.exit(f"reuse_baseline_from: {src} not found (run that config's baseline first)")
+        cfg.run_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, cfg.run_dir / "baseline.jsonl")
+        print(f"[baseline] reused {src}")
     items = run_items(cfg)
     tok = load_tokenizer(cfg)
     cells = []
@@ -269,12 +279,33 @@ def cmd_inject(args):
         cells.append({**common, "condition": "noprefix", "k": 0, "error_type": None, "prefix": "",
                       "remaining": None, "remaining_linear": None, "rel_pos": None, "is_terminal": False,
                       "orig_value": None, "new_value": None})
+        trace = split_think(base[it["id"]]["text"], True)[0].lstrip("\n") if cfg.injection_site == "trace" else ""
         for k in range(1, K + 1):
             g = hop_map[k - 1]
             pos = {"k": k, "gold_hop": g + 1, "remaining": it["hops"][g]["remaining_dep"], "remaining_linear": K - k,
                    "rel_pos": k / K, "is_terminal": k == K, "orig_value": hops[k - 1].answer}
+            if cfg.injection_site == "trace":
+                # first mention of the hop-k answer in the model's own thinking (its words or gold's)
+                cands = [hops[k - 1].answer, it["hops"][g]["answer"]]
+                if k == K:
+                    cands += [it["answer"], *it["answer_aliases"]]
+                hit = find_trace_mention(trace, cands)
+                if hit and re.search(r"(?<!\w)" + re.escape(hit[2]) + r"(?!\w)", it["question"], re.IGNORECASE):
+                    hit, why = None, "answer_in_question"     # first mention would just restate the question
+                else:
+                    why = "hop_answer_not_in_trace"
+                prefix_fn = (lambda v=None: build_trace_prefix(trace, hit[0], hit[1], v)) if hit else None
+                if hit and prefix_fn() is None:
+                    hit, prefix_fn, why = None, None, "no_sentence_end_after_mention"
+                if hit is None:
+                    for cond, et in [("clean", None), ("inject", "in_context"), ("inject", "off_context")]:
+                        dropped.append({**common, **pos, "condition": cond, "error_type": et, "reason": why})
+                    continue
+                pos.update(orig_value=hit[2], trace_frac=round(hit[1] / max(1, len(trace)), 3))
+            else:
+                prefix_fn = lambda v=None, k=k: build_prefix(chain, hops, k, v)  # noqa: E731
             cells.append({**common, **pos, "condition": "clean", "error_type": None,
-                          "prefix": build_prefix(chain, hops, k), "new_value": None})
+                          "prefix": prefix_fn(), "new_value": None})
             for et in ("in_context", "off_context"):
                 value, reason, n_cand = pick_value(it, k, hops[k - 1].answer, et, clean_text, off_pool, gold_idx=g)
                 if value is None:
@@ -282,13 +313,14 @@ def cmd_inject(args):
                                     "reason": reason, "n_candidates": n_cand})
                     continue
                 cells.append({**common, **pos, "condition": "inject", "error_type": et,
-                              "prefix": build_prefix(chain, hops, k, value), "new_value": value})
+                              "prefix": prefix_fn(value), "new_value": value})
     write_jsonl(cfg.run_dir / "cells.jsonl", cells)
     write_jsonl(cfg.run_dir / "dropped.jsonl", dropped)
     n_inj = sum(c["condition"] == "inject" for c in cells)
-    print(f"{len(elig)} eligible items -> {len(cells)} cells ({n_inj} inject), {len(dropped)} inject cells dropped")
-    for (et, reason), n in Counter((d["error_type"], d["reason"].split(":")[-1]) for d in dropped).most_common():
-        print(f"  dropped {et:12s} {reason:40s} {n}")
+    print(f"{len(elig)} eligible items -> {len(cells)} cells ({n_inj} inject), {len(dropped)} cells dropped")
+    for (cond, et, reason), n in Counter((d["condition"], d["error_type"] or "-", d["reason"].split(":")[-1])
+                                         for d in dropped).most_common():
+        print(f"  dropped {cond:6s} {et:12s} {reason:40s} {n}")
 
 
 # ---------------------------------------------------------------- continue
@@ -319,7 +351,8 @@ def cmd_score(args):
     cfg = load_config(args.config)
     rows = read_jsonl(cfg.run_dir / "continuations.jsonl")
     meta = {"run_id": cfg.run_name, "git_hash": git_hash(), "task": "musique", "model": cfg.model_id,
-            "mode": cfg.mode, "quant": cfg.quant, "gpu": cfg.gpu, "frame": "prefill",
+            "mode": cfg.mode_label, "injection_site": cfg.injection_site,
+            "quant": cfg.quant, "gpu": cfg.gpu, "frame": "prefill",
             "model_revision": cfg.revision, "sample_idx": 0, "explicit_sc": None, "doubt_marker": None}
     scored = []
     for r in rows:

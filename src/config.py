@@ -64,6 +64,15 @@ class Config:
     data: DataCfg = field(default_factory=DataCfg)
     eligibility: EligibilityCfg = field(default_factory=EligibilityCfg)
     bootstrap_reps: int = 2000
+    # where the error is planted: "hops" = prefilled hop lines (inside <think> in think mode);
+    # "trace" = the model's own thinking text, mid-thought (think mode only)
+    injection_site: str = "hops"
+    reuse_baseline_from: str | None = None   # run_name whose baseline.jsonl to copy instead of regenerating
+
+    @property
+    def mode_label(self) -> str:
+        """Mode as written to scored rows; trace-site thinking is its own condition."""
+        return f"{self.mode}_trace" if self.injection_site == "trace" else self.mode
 
     @property
     def think(self) -> bool:
@@ -105,6 +114,8 @@ def load_config(path: str | Path) -> Config:
         raise ValueError(f"mode must be nothink|think, got {cfg.mode}")
     if cfg.backend not in ("vllm", "hf"):
         raise ValueError(f"backend must be vllm|hf, got {cfg.backend}")
+    if cfg.injection_site not in ("hops", "trace") or (cfg.injection_site == "trace" and not cfg.think):
+        raise ValueError(f"injection_site must be hops|trace (trace needs mode: think), got {cfg.injection_site}")
     return cfg
 
 

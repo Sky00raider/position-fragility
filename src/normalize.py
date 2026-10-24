@@ -11,7 +11,7 @@ _PUNCT = set(string.punctuation) | {"‘", "’", "“", "”", "–", "—"}
 
 def normalize(s: str | None) -> str:
     """Lowercase, strip accents, remove punctuation and articles, collapse whitespace."""
-    if s is None:
+    if not isinstance(s, str):      # None, or NaN from a pandas column with missing values
         return ""
     s = unicodedata.normalize("NFKD", s)
     s = "".join(ch for ch in s if not unicodedata.combining(ch))

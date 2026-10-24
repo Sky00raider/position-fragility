@@ -71,3 +71,40 @@ def test_qwen_template_kwargs(model):
     tok = get_tok(model)
     assert chat_prefix_text(tok, model, "Q", False).endswith("<think>\n\n</think>\n\n")
     assert chat_prefix_text(tok, model, "Q", True).endswith("<|im_start|>assistant\n")
+
+
+def test_trace_mention_and_prefix():
+    from src.prompts import build_trace_prefix, find_trace_mention
+    trace = ("Okay, the question asks about the performer. The paragraph says the album is by Charles Mingus. "
+             "So the performer is Charles Mingus.\nNext, Mingus was born in Nogales, Arizona. The capital is Phoenix.")
+    s, e, m = find_trace_mention(trace, ["charles mingus", "Mingus"])
+    assert m == "Charles Mingus" and trace[s:e] == m                      # earliest whole-word mention
+    clean = build_trace_prefix(trace, s, e)
+    assert clean.endswith("the album is by Charles Mingus.")              # cut at the end of that sentence
+    bad = build_trace_prefix(trace, s, e, "Miles Davis")
+    assert bad.endswith("the album is by Miles Davis.") and "Mingus" not in bad
+    assert find_trace_mention(trace, ["Arizon"]) is None                   # whole words only
+    s2, e2, _ = find_trace_mention(trace, ["Phoenix"])
+    assert build_trace_prefix(trace, s2, e2) == trace                       # sentence ending at end of text
+    assert build_trace_prefix("no end here Phoenix", 12, 19) is None       # unfinished sentence -> drop
+    assert find_trace_mention("they chose the Soviets.", ["the Soviets"])[2] == "the Soviets"
+    assert find_trace_mention("they chose Soviets.", ["the Soviets"])[2] == "Soviets"   # leading "the" optional
+
+
+@pytest.mark.parametrize("model", [QWEN_8B])
+def test_trace_splice_tokens(model):
+    tok = get_tok(model)
+    prefix = "Okay, let me think. The album is by Miles Davis."
+    ids = build_ids(tok, model, "Question?", True, prefill_text(prefix, True))
+    decoded = tok.decode(ids)
+    assert decoded.endswith("<|im_start|>assistant\n<think>\n" + prefix) and "</think>" not in decoded
+
+
+def test_trace_requires_think(tmp_path):
+    from src.config import load_config
+    p = tmp_path / "c.yaml"
+    p.write_text("run_name: x\nbackend: hf\nmodel_id: m\nmode: nothink\ninjection_site: trace\n")
+    with pytest.raises(ValueError):
+        load_config(p)
+    p.write_text("run_name: x\nbackend: hf\nmodel_id: m\nmode: think\ninjection_site: trace\n")
+    assert load_config(p).mode_label == "think_trace"

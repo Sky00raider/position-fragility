@@ -357,3 +357,21 @@ Linear shared items:
 | Results: H4 robustness | shared-item mode comparison |
 | Limitations | scope reduction, type-tag noise, token cap, different item sets per mode (shared-item check), selection by eligibility, 1 sample per cell, 4-bit 8B only, think prefill cuts deliberation (why clean twins fail) |
 | Appendix: reproducibility | GPU box setup problems; GPU memory; pinned revisions in `configs/` |
+
+### New condition: error planted in the model's own thinking text (`think_trace`) **[method] [deviation]**
+Built 2026-10-24 after the clean-twin audit: with the hop-summary prefill inside `<think>` Qwen3
+stops deliberating (median 110 new tokens vs 1,231; 28/985 clean continuations contain any
+reasoning prose), so the original think condition does not test whether thinking catches errors.
+New injection site (`injection_site: trace`, config `qwen3_8b_think_trace.yaml`), the design doc's
+§6.6 alternative (as in von Recum et al.): in the model's own baseline thinking trace, find the
+first whole-word mention of the hop-k answer (model's own hop answer or gold hop answer; aliases
+for the terminal hop), replace it with the planted value (or leave it for the clean twin), cut at
+the end of that sentence, and let the model continue thinking. Same items, baseline (reused, not
+regenerated), planted values and validity rules as `qwen3_8b_think`; scored rows get
+`mode = think_trace` and `injection_site`. Mention not found → cell dropped and logged; a mention
+that also appears in the question is dropped (`answer_in_question`).
+Dry run on the saved traces: 4,313 cells (vs 4,318), cut at median 25% of the trace, monotone in
+k (12%, 22%, 36%, 57% for k=1..4). Caveat for the paper: the first mention is sometimes the model
+*reading* a paragraph rather than concluding. Analysis now compares all mode pairs (nothink /
+think / think_trace) on shared items. GPU run: `bash scripts/overnight.sh qwen3_8b_think_trace`
+(~2.5–3.5 h).
