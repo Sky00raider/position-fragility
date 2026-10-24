@@ -22,6 +22,11 @@ After it arrives: check gate numbers + judge acceptance + drop counts, check thi
 length (>110 tokens median), rate ~100 v2 planted values independently (CLAUDE.md rule 12),
 then swap the paper's numbers to v2 (v1 + audit become a methods note / robustness).
 
+## Paper text is FROZEN (2026-10-24, after 4 AI reviews)
+Change it only for: (1) factual/numerical errors, (2) claims the data don't support, (3) new results
+(v2, think_trace), (4) venue requirements (page limit, anonymization). No more review-driven polishing;
+the next useful review is a teammate reading paper/main.pdf cold.
+
 ## Deadlines
 Experiments done **Oct 27 2026**, paper submitted **Oct 30 2026** (IEEE conference; 4-person student team).
 
