@@ -251,6 +251,46 @@ selected subset. Must be stated in the paper.
   (β=−0.35, p<0.001).
 - Adoption: Qwen nothink adopted the planted value in 31% of inject cells (1,688/5,413).
 
+### Why clean twins fail: no scoring bug; the think prefill cuts deliberation **[result] [limit]**
+Audit of every failing intermediate clean twin (`scripts/clean_twin_audit.py`, CPU, reads
+`scored.jsonl`). **No extraction/scoring bug:** in 0 of 282 failed Qwen-think twins (0/204 Llama,
+0/73 Qwen nothink) is the gold written as any `Final answer:` (inside or after `<think>`), so
+`src/parse.py` and the score step are unchanged and nothing was re-scored. Qwen think: 0 truncated,
+0 missing final lines. Llama: 2 truncated, 5 without a `Final answer:` line (3 of these end on a
+correct last hop; rule 8 counts them wrong, by design).
+
+Failed intermediate twins by where the model left its **own** baseline chain (all items; linear in
+brackets):
+
+| | Qwen3 think | Llama nothink | Qwen3 nothink |
+|---|---|---|---|
+| failed / intermediate twins | 282/985 (29%) [186/756, 25%] | 204/1169 (17%) [143/921] | 73/1911 (4%) [59/1625] |
+| diverged at hop k+1 (next hop) | 129 (46%) [82] | 97 (48%) | 32 (44%) |
+| diverged at a later hop | 95 (34%) [53] | 61 (30%) | 20 (27%) |
+| same chain, answer at other granularity ("1991" for `December 25, 1991`, "Richland" for `Richland County`) | 58 (21%) [51] | 39 (19%) | 21 (29%) |
+| truncated / no final line | 0 | 7 (3%) | 0 |
+| final answer keeps prefilled hops 1..k verbatim | 281/282 | 204/204 | 73/73 |
+
+**Mechanism (think mode).** The prefix is the model's post-`</think>` hop summary. Once it sits
+inside `<think>`, Qwen3 treats reasoning as finished: **985/985** think clean continuations contain
+only hop lines + `Final answer:` (no reasoning prose), median **110** generated tokens vs **1,231**
+for the unprefixed resample (baseline 1,132). Inject cells are the same (median 110). The model
+does not abandon the prefilled chain (281/282 keep it); it answers the remaining hops without
+deliberating, and on harder hops picks a different entity. Paired with the noprefix resample of the
+same item: think clean wrong / noprefix right 183 vs the reverse 68 (McNemar p = 2e-13; linear
+129 vs 46), so the prefill itself costs accuracy in think mode. In nothink there is no such cost
+(Qwen 42 vs 55, p = 0.22; Llama 88 vs 190: the prefill *helps* Llama, whose failures are
+ordinary sampling variance at temperature 0.6).
+
+Consequences for the paper: think-mode RR is measured on items the model can finish *without*
+further deliberation (clean-twin conditioning), and post-splice "thinking" is ~110 tokens, so H4
+compares nothink with "thinking-format, short continuation", not with full thinking. Most think
+recoveries happen in the restated chain after `</think>`: of 1,110 correct inject cells with a
+correct twin, 996 rewrite the hop-k value there (the silent-recovery pattern above). No definition
+change proposed: the granularity misses are real EM misses (the model wrote the shorter/longer
+form; its own baseline wrote the gold form). Most are shorter than gold, so `correct_contains`
+(gold inside the final line) does not rescue them either.
+
 ---
 
 ## Paper hooks (quick index)
@@ -264,5 +304,5 @@ selected subset. Must be stated in the paper.
 | Setup: models, decoding, hardware | GPU memory; main-run plan; decoding table in `paper/main.tex` |
 | Results: pilot / yield | pilot 1 and 2 tables |
 | Analysis: silent recovery example | thinking-mode injection entry |
-| Limitations | scope reduction, type-tag noise, token cap, different item sets per mode, selection by eligibility, 1 sample per cell, 4-bit 8B only |
+| Limitations | scope reduction, type-tag noise, token cap, different item sets per mode, selection by eligibility, 1 sample per cell, 4-bit 8B only, think prefill cuts deliberation (why clean twins fail) |
 | Appendix: reproducibility | GPU box setup problems; GPU memory; pinned revisions in `configs/` |
