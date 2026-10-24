@@ -465,3 +465,7 @@ the paper draft is ahead of schedule. v1 results stay as the fallback and are ne
   current eligibility reproduces v1 exactly (0 differences over 6,727 / 2,180 / 6,727 items). So v2
   uses the same items and chains, and reuse of clean/noprefix cells will match. (The CPU smoke run
   reused 0/18 because the old CPU run predates prompt v2: the length check correctly refused.)
+- More pre-flight (same day): `bash -n scripts/run_main.sh` OK; `scripts/vet_gate.py` executed on CPU
+  with Qwen3-0.6B as judge on 40 reference rows → accepts 0%, "GATE FAILED", exit code 1 (the stop path
+  works). Candidate lists for `vet` build in 45 s for Qwen nothink (5,666 cells, 49k valid candidates,
+  ≤12 per cell). Fallback if the GPU gate fails: run v1 `qwen3_8b_think_trace` that night.

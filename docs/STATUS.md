@@ -13,7 +13,9 @@ written that way).
 Ask the friend to run, from the repo root:
     git pull && bash scripts/overnight.sh qwen3_8b_nothink_v2 qwen3_8b_think_v2 qwen3_8b_think_trace_v2 llama31_8b_nothink_v2
 It first runs the vet gate (~5 min); if the gate FAILS nothing else runs, so check the log
-(`tail -f logs/main_*.log`) after ~10 min and send it here if it says GATE FAILED. Then ~2.5-4 h.
+(`tail -f logs/main_*.log`) after ~10 min. If it says GATE FAILED, don't waste the night: run the
+unvetted think_trace instead (`bash scripts/overnight.sh qwen3_8b_think_trace`) and send the log here.
+Otherwise ~2.5-4 h (vet ~15-30 min of it).
 Result: `main_results_<host>_<stamp>.tar.gz` (v2 runs + runs/analysis_v2 + runs/vet). Copy runs into
 `runs/`, keep the tarball pristine. v1 runs/analysis_main stay untouched (fallback).
 After it arrives: check gate numbers + judge acceptance + drop counts, check think_trace continuation
