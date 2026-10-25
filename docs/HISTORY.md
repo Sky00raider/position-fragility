@@ -668,3 +668,23 @@ continuation for a different planted value).
 - **H4:** regression rel_pos:mode think n.s. (β −0.01, p 0.99), **think_trace β +3.13, p<0.001**: with
   deliberation after the error, the shape changes (late-stage fragility disappears).
 Pending: top-up run (not_vetted cells) tonight; independent rating of 100 v2 planted values (running).
+
+### Independent rating of 100 v2 planted values (CLAUDE.md rule 12) **[method] [result] [limit]**
+2026-10-25. Stratified sample (25 per error type × K) of unique v2 planted values (Qwen nothink, think,
+Llama), rated blind by a Sonnet subagent with the SAME instructions as rater A of the v1 audit
+(`runs/audit/v2_{blind,key,rated}.csv`, gitignored).
+| | v1 (audit, same rater) | v2 |
+|---|---|---|
+| right kind of thing | 50% | **82%** |
+| plausible | 41% | 46% |
+| both | 36% | **46%** |
+| plausible given right type | 72% | 56% |
+Same for both error types. Reading the "right type but implausible" rows: the rater marks values
+implausible when it KNOWS the fact (US as 2002 World Cup winner, Mexico for a Libyan village, the
+Bahamas' PM as Iraq's PM): plausibility = "not obviously wrong to a knowledgeable reader", which is
+rater-knowledge dependent. The judge fixed type errors but turned many into right-type, wrong-region
+values; its "believable" question had added little at the gate already. The gate's 0.68 precision did not
+transfer (it was measured on v1's first-ranked values; v2 often accepts lower-ranked candidates).
+Decision: no v3 judge iteration (deadline; plausibility is a soft construct). Paper: describe v2 values as
+"the right kind of entity in 82% of cases, but often recognisably wrong to a knowledgeable reader (46%
+plausible)"; keep the v1 plausible-only robustness check (effect strongest on plausible values).
