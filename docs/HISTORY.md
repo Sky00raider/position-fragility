@@ -644,3 +644,27 @@ the same rank order as `pick_value` (`unjudged_before_accept`, `first_accepted`;
 Dry run on the real data: 152/272/408/272 cells need more judging (≤ 3,138 candidates) → top-up run.
 Also added: `continue` refuses to resume if a done cell's prefix changed (a top-up must never reuse a
 continuation for a different planted value).
+
+### v2 findings (before the not_vetted top-up; `runs/analysis_v2`, 2000 reps, linear) **[result]**
+- **think_trace works.** Median new tokens after the cut: clean 856 / inject 960 (summary-prefill think:
+  110 / 114; noprefix ~1,240). Intermediate clean twins 87% (think 71%). Cut at median 25% of the trace.
+- **H1 (stronger with vetted values):** PSI K=3 Qwen nothink −0.21 [−0.26, −0.16] / −0.24 [−0.28, −0.19]
+  (v1 −0.14/−0.20); think −0.18 / −0.12; Llama −0.09 / −0.15. **think_trace ≈ 0:** +0.02 / +0.01
+  (off-context K=3 passes ±5 pp equivalence), K=4 +0.08 [0.01, 0.16] / −0.01.
+- **think_trace recovers almost everything:** RR 0.88–0.97 at every hop incl. terminal (terminal
+  0.94/0.96 vs intermediate 0.94/0.94); adopted 0%; 91% of recoveries explicit (rule-based; "Wait, …"),
+  vs ~0% for all other conditions. Leakage check: true hop value still somewhere in the trace prefix in
+  10% of cells; RR with leak 0.937 vs without 0.931 → leakage does not explain it. Examples: the planted
+  value usually sits in a misreading of a paragraph or a stated fact that the model then re-checks.
+- **RQ2 now consistent across models:** within-item branching contrast at fixed remaining: Llama −0.04
+  [−0.17, 0.09] (v1 −0.12, significant), Qwen nothink +0.05 [−0.03, 0.13], think +0.04, trace +0.04.
+  Fit (composition base): remaining better than rel_pos for Llama ΔAIC 4.6, Qwen nothink 17.8, think 2.2;
+  trace tie. Joint model: remaining p=0.03 (Llama), <0.001 (Qwen nothink); rel_pos n.s. everywhere.
+- **Mechanism (K=3, nothink):** Qwen catch at 1st later hop 0.49 (early) / 0.44 (late), 2nd chance 0.36
+  → predicted 0.67 vs 0.65 observed (early), 0.44 vs 0.43 (late). Llama 0.39 / 0.53, 2nd 0.50.
+  Planted value carried into next sub-question: Qwen 67% / 78%, Llama 44% / 44%.
+- **H3:** terminal RR nothink ≤0.01 (Qwen), 0.06–0.11 (Llama); think 0.52–0.55; pooling inflates PSI
+  2–4× without thinking (Qwen −0.41/−0.46 vs −0.21/−0.24).
+- **H4:** regression rel_pos:mode think n.s. (β −0.01, p 0.99), **think_trace β +3.13, p<0.001**: with
+  deliberation after the error, the shape changes (late-stage fragility disappears).
+Pending: top-up run (not_vetted cells) tonight; independent rating of 100 v2 planted values (running).
