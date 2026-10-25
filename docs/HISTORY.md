@@ -624,3 +624,23 @@ a country when the candidate is France). Validity gap found (v1 too, not the jud
 can appear in the question itself ("Along with ABC and NBC … broadcaster" → "ABC"): 7/5,413 (Qwen
 nothink), 0/2,565 (think), 9/3,289 (Llama) inject cells, all in-context → negligible; not fixed mid-run;
 can be excluded in analysis. Run continued with vet round 1 (14,575 candidates, 12,066 new to judge).
+
+## 2026-10-25 (Sun): v2 results arrived
+
+### v2 run finished (24 Oct 22:26 → 25 Oct 01:07) **[result] [setup]**
+`Research Paper/main_results_archlinux_20261024_2226/` (pristine); runs copied to `runs/*_v2`, judge cache
++ rule to `runs/vet/`, the box's analysis to `runs/analysis_20261024_2226/`. Reuse worked: 3,755/3,755
+Qwen nothink noprefix+clean cells copied (similarly for the others), only inject cells generated.
+Vet coverage (cells with an accepted value): Qwen nothink 4,644/5,413 (86%), think 2,178/2,565 (85%).
+
+### BUG: vet skipped cells whose accepted value came from another cell (fixed) **[deviation] [limit]**
+`cmd_vet` treated a cell as done if ANY candidate in its list had an accepted verdict. MuSiQue reuses
+sub-questions across items, and rule 4 makes candidate lists model-specific, so the accepted candidate
+was often judged for another cell/run while higher-ranked candidates of THIS cell stayed unjudged;
+`inject` (correctly strict, rank order) then dropped the cell as `not_vetted`. Lost: Qwen nothink 104
+(2.3%), think 225 (10.5%), Llama 324 (11.9%), think_trace 225 (10.5%) of would-be inject cells. No wrong
+value was ever planted (inject never skips an unjudged higher-ranked candidate). Fix: `vet` judges in
+the same rank order as `pick_value` (`unjudged_before_accept`, `first_accepted`; regression test).
+Dry run on the real data: 152/272/408/272 cells need more judging (≤ 3,138 candidates) → top-up run.
+Also added: `continue` refuses to resume if a done cell's prefix changed (a top-up must never reuse a
+continuation for a different planted value).

@@ -316,6 +316,36 @@ def run_judge(judge_cfg: Config, triples: list[tuple[str, str, str]], cache_file
     return cache
 
 
+def unjudged_before_accept(cands: list[str], verdict, limit: int) -> list[str]:
+    """Candidates still to judge for one cell, in rank order: the unjudged ones (verdict None) that come
+    before the first accepted one, at most `limit`. Mirrors pick_value, which walks the same order and
+    stops at the first unjudged candidate. Fixed 2026-10-25: the old check ("any candidate accepted?")
+    skipped cells whose ACCEPTED candidate came from another cell or run sharing the same sub-question
+    (MuSiQue reuses sub-questions; rule 4 makes candidate lists model-specific), leaving higher-ranked
+    candidates unjudged; inject then dropped those cells as not_vetted (2-12% of cells in the v2 run)."""
+    todo = []
+    for c in cands:
+        v = verdict(c)
+        if v:
+            break
+        if v is None:
+            todo.append(c)
+            if len(todo) == limit:
+                break
+    return todo
+
+
+def first_accepted(cands: list[str], verdict) -> bool:
+    """True if pick_value would find an accepted value: an accept with every earlier candidate judged."""
+    for c in cands:
+        v = verdict(c)
+        if v is None:
+            return False
+        if v:
+            return True
+    return False
+
+
 def cmd_vet(args):
     """Judge planted-value candidates in rank order, a few per cell per round, until each cell has
     an accepted candidate or vet_max_per_cell were rejected. Run before `inject`."""
@@ -345,16 +375,13 @@ def cmd_vet(args):
     for rnd in itertools.count(1):
         triples = []
         for subq, gold, cands in slots:
-            verdicts = [ok(cache.get(vet_key(subq, gold, c))) for c in cands]
-            if any(verdicts):
-                continue
-            new = [c for c, v in zip(cands, verdicts) if v is None][:cfg.vet_per_round]
-            triples += [(subq, gold, c) for c in new]
+            triples += [(subq, gold, c) for c in unjudged_before_accept(
+                cands, lambda c: ok(cache.get(vet_key(subq, gold, c))), cfg.vet_per_round)]
         if not triples:
             break
         print(f"[vet] round {rnd}: {len(triples)} candidates (rule: {rule})", flush=True)
         cache = run_judge(judge_cfg, triples)
-    n_ok = sum(any(ok(cache.get(vet_key(s, g, c))) for c in cands) for s, g, cands in slots)
+    n_ok = sum(first_accepted(cands, lambda c: ok(cache.get(vet_key(s, g, c)))) for s, g, cands in slots)
     print(f"[vet] {cfg.run_name}: {n_ok}/{len(slots)} cells have an accepted value "
           f"({len(slots) - n_ok} will be dropped as vet_rejected)")
 
@@ -453,6 +480,13 @@ def cmd_continue(args):
     out = cfg.run_dir / "continuations.jsonl"
     if cfg.reuse_cells_from and not out.exists():
         reuse_cells(cfg, cells, out)
+    # resuming skips cells by key, so a done cell must still have the same prefix (planted value);
+    # otherwise its old continuation would be silently reused for a different prompt
+    done = {cell_key(r): r.get("prefix") for r in read_jsonl(out)}
+    changed = [cell_key(c) for c in cells if cell_key(c) in done and done[cell_key(c)] != c["prefix"]]
+    if changed:
+        sys.exit(f"{len(changed)} cells already in {out} now have a different prefix (e.g. {changed[0]}): "
+                 f"refusing to resume; move that file away and rerun")
     generate_cells(cfg, cells, out, "continue")
 
 

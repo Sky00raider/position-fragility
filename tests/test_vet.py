@@ -38,6 +38,29 @@ def test_accepted_and_read_rule(tmp_path):
     assert read_rule(p) is None
 
 
+def test_vet_judges_in_rank_order_like_inject():
+    """Regression (2026-10-25): a cell whose 5th candidate was accepted elsewhere (shared sub-question)
+    must still get candidates 1-4 judged, because pick_value walks in rank order."""
+    v = {"e": True}
+    verdict = lambda c: v.get(c)  # noqa: E731
+    assert pipeline.unjudged_before_accept(list("abcde"), verdict, 3) == ["a", "b", "c"]
+    assert not pipeline.first_accepted(list("abcde"), verdict)
+    v.update(a=False, b=False, c=False, d=False)
+    assert pipeline.unjudged_before_accept(list("abcde"), verdict, 3) == []
+    assert pipeline.first_accepted(list("abcde"), verdict)
+    v2 = {"a": False, "b": True, "c": None}
+    assert pipeline.unjudged_before_accept(list("abc"), v2.get, 3) == []   # accepted at b: done
+    # and the result agrees with pick_value on the same verdicts
+    it = make_item()
+    first, _, _ = pick_value(it, 1, "Lyon", "in_context", "", [])
+    order = [first] + [c for c in ("Texas", "Nice", "Brest") if c != first]
+    subq = "What city is Rhone in?"
+    vetted = {vet_key(subq, "Lyon", order[2]): True}            # only the 3rd is judged (accepted)
+    assert pick_value(it, 1, "Lyon", "in_context", "", [], vetted=vetted)[1] == "not_vetted"
+    todo = pipeline.unjudged_before_accept(order, lambda c: vetted.get(vet_key(subq, "Lyon", c)), 12)
+    assert todo == order[:2]
+
+
 def load_gate():
     spec = importlib.util.spec_from_file_location("vet_gate", Path(__file__).parents[1] / "scripts" / "vet_gate.py")
     mod = importlib.util.module_from_spec(spec)
