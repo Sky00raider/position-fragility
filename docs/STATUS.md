@@ -9,14 +9,25 @@ think_trace. Friend was unavailable on Oct 24. Experiments close Oct 27: the run
 night of Oct 26 at the latest. If it can't, submit with v1 + the audit disclosure (paper already
 written that way).
 
-## Latest (24 Oct night)
-v2 gate FAILED on the GPU box (judge prompt v1 too weak; also the 0.75 bar was above the human ceiling
-of 0.74). Fixed in code (judge prompt v2, rule chosen on tune half / checked on holdout, bar 0.65; see
-HISTORY). run_main.sh now FALLS BACK automatically if the gate fails: vetted configs are replaced by
-their `fallback_config` (think_trace_v2 -> v1 think_trace), others dropped. Analysis now goes to
-`runs/analysis_<stamp>` (never overwrites). One command for tonight (short runs first, think_trace last):
-    git pull && bash scripts/overnight.sh qwen3_8b_nothink_v2 qwen3_8b_think_v2 llama31_8b_nothink_v2 qwen3_8b_think_trace_v2
-If a v1 think_trace run is already going, let it finish first, then run this (it reuses its clean cells).
+## Latest (25 Oct) -- READ THIS FIRST
+v2 + think_trace_v2 results are in (`../main_results_archlinux_20261024_2226/`, copied to `runs/*_v2`,
+`runs/vet/`; local analysis `runs/analysis_v2/`). Findings in HISTORY "2026-10-25". Headlines: late-stage
+fragility stronger with vetted values; RQ2 = remaining steps in every model; think_trace (error mid-thought)
+works: ~960 tokens of deliberation, ~93% recovery at every hop, 91% explicit, PSI ~0 (H4 shape change).
+Open items, in order:
+1. TOP-UP GPU run tonight (25 Oct) to recover cells lost to the vet bug (fixed in 7dae8c3): same command
+   as below. When the tarball arrives: copy the four `runs/*_v2` dirs again (overwrite local copies),
+   rerun `python -m src.analysis --runs runs/qwen3_8b_nothink_v2 runs/qwen3_8b_think_v2
+   runs/qwen3_8b_think_trace_v2 runs/llama31_8b_nothink_v2 --out runs/analysis_v2 --reps 2000`.
+2. Plausible-only check on v2 (optional robustness): blind sample `runs/audit/plaus200v2_blind.csv`
+   (200 cells, Qwen nothink K=3, k=1/2) is being rated in another window; result goes to
+   `runs/audit/plaus200v2_rated.csv` (cols rid,type_ok,plausible,notes). Outcomes are in
+   `plaus200v2_key.csv` (rater must NOT see it). Then: PSI on type_ok&plausible cells vs all (v1: -0.31).
+3. Rewrite the paper for v2 (text freeze rules below still apply: this is "new results"). think_trace
+   becomes the thinking finding (summary-prefill error propagates; mid-thought error is caught);
+   contribution (iii) and the 5 think_trace 	bd's; Table III H4 -> shape changes with deliberation;
+   Fig. 2 from runs/analysis_v2/figures/recovery_linear_paper.png (4 columns now). v2 planted values:
+   right kind 82% (v1 50%), plausible 46% (v1 41%) -- describe honestly (HISTORY). Page limit unknown.
 
 ## NEXT GPU RUN (v2 + think_trace in one overnight run; friend's box)
 Ask the friend to run, from the repo root:
